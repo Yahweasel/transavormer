@@ -1,0 +1,38 @@
+{
+  "name": "transavormer",
+  "version": "0.0.1",
+  "description": "Transform (transcode, transmux, etc) audio/video formats using libav.js and WebCodecs",
+  "main": "dist/transavormer.js",
+  "scripts": {
+    "build": "rollup -c",
+    "clean": "rm -rf dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "libav.js",
+    "libav",
+    "ffmpeg",
+    "transcode",
+    "transmux",
+    "demux",
+    "decode",
+    "mux",
+    "encode",
+    "video",
+    "audio"
+  ],
+  "author": "Yahweasel",
+  "license": "ISC",
+  "devDependencies": {
+    "@libav.js/variant-webcodecs": "^6.0.7",
+    "@libav.js/variant-webm-vp9": "^6.0.7",
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "libavjs-webcodecs-bridge": "^0.2.0",
+    "libavjs-webcodecs-polyfill": "^0.5.1",
+    "rollup": "^4.24.0",
+    "tslib": "^2.7.0"
+  }
+}
