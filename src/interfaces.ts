@@ -228,17 +228,48 @@ export interface InitMuxer {
     input: InitPacketStream;
 };
 
+/**
+ * Initializer for a user-defined packet stream.
+ */
+export interface InitUserPacketStream {
+    type: "packet-stream";
+    streams: StreamParameters[];
+    input: ReadableStream<(number|LibAVT.Packet)[]>;
+}
+
+/**
+ * Initializer for a user-defined frame stream.
+ */
+export interface InitUserFrameStream {
+    type: "frame-stream";
+    streamTypes: ("video"|"audio")[];
+    input: ReadableStream<StreamFrame[]>;
+}
+
+/**
+ * Initializer for a single-stream user-defined frame stream.
+ */
+export interface InitUserMonoFrameStream {
+    type: "mono-frame-stream";
+    streamType: "video"|"audio";
+    input: ReadableStream<(
+        number | LibAVT.Frame |
+        wcp.VideoFrame | VideoFrame | wcp.AudioData
+    )[]>;
+}
 
 // Generic initializers
 export type InitPacketStream =
     InputFile |
     InitDemuxer | InitDemuxerPtr |
     InitEncoder | InitEncoderPtr |
+    InitUserPacketStream |
     PacketStreamAny | Promise<PacketStreamAny>;
 
 export type InitFrameStream =
     InitPacketStream |
     InitFrameNormalizer | InitFrameNormalizerPtr |
+    InitUserFrameStream | InitUserMonoFrameStream |
     FrameStreamAny | Promise<FrameStreamAny>;
 
 
@@ -250,4 +281,6 @@ export type Init =
     InitDecoder | InitDecoderPtr |
     InitFrameNormalizer | InitFrameNormalizerPtr |
     InitEncoder | InitEncoderPtr |
-    InitMuxer;
+    InitMuxer |
+    InitUserPacketStream |
+    InitUserFrameStream | InitUserMonoFrameStream;

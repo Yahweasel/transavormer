@@ -34,6 +34,9 @@ export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | u
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoder): Promise<ifs.PacketStream>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoderPtr): Promise<ifs.PacketStreamPtr>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitMuxer): Promise<ifs.FileStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitUserPacketStream): Promise<ifs.PacketStreamAny>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitUserFrameStream): Promise<ifs.FrameStreamAny>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitUserMonoFrameStream): Promise<ifs.FrameStreamAny>;
 
 /**
  * Create a transavormer for the requested task.
@@ -58,6 +61,15 @@ export function build(
 
         case "muxer":
             return buildMuxer(libav, lawc, init);
+
+        case "packet-stream":
+            return buildUserPacketStream(init);
+
+        case "frame-stream":
+            return buildUserFrameStream(init);
+
+        case "mono-frame-stream":
+            return buildUserMonoFrameStream(init);
     }
 
     throw new Error(`Unrecognized initializer type ${(<any> init).type}`);
@@ -225,4 +237,64 @@ function buildMuxer(
     return muxer.Muxer.build(
         libav, init, buildPacketStream(libav, lawc, init.input)
     );
+}
+
+export function buildUserPacketStream(
+    init: ifs.InitUserPacketStream
+): Promise<ifs.PacketStreamAny> {
+    return Promise.resolve({
+        component: "packet-stream",
+        ptr: false,
+        streams: Promise.resolve(init.streams),
+        streamType: "packet",
+        stream: <any> init.input
+    });
+}
+
+export function buildUserFrameStream(
+    init: ifs.InitUserFrameStream
+): Promise<ifs.FrameStreamAny> {
+    return Promise.resolve({
+        component: "frame-stream",
+        ptr: false,
+        streams: Promise.resolve(init.streamTypes.map(x => {
+            let ret: ifs.StreamParameters = {
+                codec_id: 0,
+                codec_type: 0 /* AVMEDIA_TYPE_AUDIO */,
+                format: 0,
+                time_base_num: 1,
+                time_base_den: 1000000
+            };
+            if (x === "video")
+                ret.codec_type = 1 /* AVMEDIA_TYPE_VIDEO */;
+            return ret;
+        })),
+        streamType: "frame",
+        stream: <any> init.input
+    });
+}
+
+export function buildUserMonoFrameStream(
+    init: ifs.InitUserMonoFrameStream
+): Promise<ifs.FrameStreamAny> {
+    const rdr = init.input.getReader();
+    const rs = new ReadableStream<ifs.StreamFrame[]>({
+        async pull(controller) {
+            const rd = await rdr.read();
+            if (rd.done) {
+                controller.close();
+            } else {
+                controller.enqueue(rd.value!.map(x => ({
+                    streamIndex: 0,
+                    frame: <any> x
+                })));
+            }
+        }
+    });
+
+    return buildUserFrameStream({
+        type: "frame-stream",
+        streamTypes: [init.streamType],
+        input: rs
+    });
 }
