@@ -28,7 +28,7 @@ type LibAVDecoder = [number, number, number, number];
 /**
  * A multi-decoder, consisting of decoders for any number of streams.
  */
-export class Decoder implements ifs.Decoder {
+export class Decoder implements ifs.FrameStream {
     constructor(
         ptr: boolean,
 
@@ -48,7 +48,7 @@ export class Decoder implements ifs.Decoder {
          * @private
          * Demuxed input.
          */
-        private _inputP: Promise<ifs.Demuxer | ifs.DemuxerPtr>
+        private _inputP: Promise<ifs.PacketStreamAny>
     ) {
         this.ptr = <false> ptr;
         this.stream = new ReadableStream({});
@@ -257,12 +257,12 @@ export class Decoder implements ifs.Decoder {
 
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-        init: ifs.InitDecoder, input: Promise<ifs.Demuxer | ifs.DemuxerPtr>
-    ): Promise<ifs.Decoder>;
+        init: ifs.InitDecoder, input: Promise<ifs.PacketStreamAny>
+    ): Promise<ifs.FrameStream>;
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-        init: ifs.InitDecoderPtr, input: Promise<ifs.Demuxer | ifs.DemuxerPtr>
-    ): Promise<ifs.DecoderPtr>;
+        init: ifs.InitDecoderPtr, input: Promise<ifs.PacketStreamAny>
+    ): Promise<ifs.FrameStreamPtr>;
 
     /**
      * Build a decoder.
@@ -270,8 +270,8 @@ export class Decoder implements ifs.Decoder {
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
         init: ifs.InitDecoder | ifs.InitDecoderPtr,
-        input: Promise<ifs.Demuxer | ifs.DemuxerPtr>
-    ): Promise<ifs.Decoder | ifs.DecoderPtr> {
+        input: Promise<ifs.PacketStreamAny>
+    ): Promise<ifs.FrameStreamAny> {
         const ret = new Decoder(
             init.ptr, libav, lawc, input
         );
@@ -279,7 +279,7 @@ export class Decoder implements ifs.Decoder {
         return <any> ret;
     }
 
-    component: "decoder" = "decoder";
+    streamType: "frame" = "frame";
     ptr: false;
 
     /**

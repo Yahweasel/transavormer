@@ -36,7 +36,7 @@ let fnCounter = 0;
 /**
  * A generic demuxer.
  */
-export class Demuxer implements ifs.Demuxer {
+export class Demuxer implements ifs.PacketStream {
     constructor(
         ptr: boolean,
 
@@ -170,8 +170,8 @@ export class Demuxer implements ifs.Demuxer {
         });
     }
 
-    static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxer): Promise<ifs.Demuxer>;
-    static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxerPtr): Promise<ifs.DemuxerPtr>;
+    static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
+    static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxerPtr): Promise<ifs.PacketStreamPtr>;
 
     /**
      * Build a demuxer.
@@ -179,7 +179,7 @@ export class Demuxer implements ifs.Demuxer {
     static async build(
         libav: LibAVT.LibAV,
         init: ifs.InitDemuxer | ifs.InitDemuxerPtr
-    ): Promise<ifs.Demuxer | ifs.DemuxerPtr> {
+    ): Promise<ifs.PacketStreamAny> {
         const ret = new Demuxer(
             init.ptr, libav, init.input
         );
@@ -187,7 +187,7 @@ export class Demuxer implements ifs.Demuxer {
         return <any> ret;
     }
 
-    component: "demuxer" = "demuxer";
+    streamType: "packet" = "packet";
     ptr: false;
 
     /**

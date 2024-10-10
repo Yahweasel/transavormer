@@ -23,7 +23,7 @@ import * as ifs from "./interfaces";
 /**
  * Class for normalizing frames in various formats into LibAV.
  */
-export class FrameNormalizer implements ifs.Filter {
+export class FrameNormalizer implements ifs.LibAVFrameStream {
     constructor(
         ptr: boolean,
 
@@ -43,7 +43,7 @@ export class FrameNormalizer implements ifs.Filter {
          * @private
          * Input frames.
          */
-        private _inputP: Promise<ifs.Decoder | ifs.DecoderPtr>
+        private _inputP: Promise<ifs.FrameStreamAny>
     ) {
         this.ptr = <false> ptr;
         this.stream = new ReadableStream({});
@@ -136,13 +136,13 @@ export class FrameNormalizer implements ifs.Filter {
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
         init: ifs.InitFrameNormalizer,
-        input: Promise<ifs.Decoder | ifs.DecoderPtr>
-    ): Promise<ifs.Filter>;
+        input: Promise<ifs.FrameStreamAny>
+    ): Promise<ifs.LibAVFrameStream>;
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
         init: ifs.InitFrameNormalizerPtr,
-        input: Promise<ifs.Decoder | ifs.DecoderPtr>
-    ): Promise<ifs.FilterPtr>;
+        input: Promise<ifs.FrameStreamAny>
+    ): Promise<ifs.LibAVFrameStreamPtr>;
 
     /**
      * Build a normalizer.
@@ -150,8 +150,8 @@ export class FrameNormalizer implements ifs.Filter {
     static async build(
         libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
         init: ifs.InitFrameNormalizer | ifs.InitFrameNormalizerPtr,
-        input: Promise<ifs.Decoder | ifs.DecoderPtr>
-    ) {
+        input: Promise<ifs.FrameStreamAny>
+    ): Promise<ifs.LibAVFrameStreamAny> {
         const ret = new FrameNormalizer(
             init.ptr, libav, lawc, input,
         );
@@ -159,7 +159,7 @@ export class FrameNormalizer implements ifs.Filter {
         return <any> ret;
     }
 
-    component: "filter" = "filter";
+    streamType: "libav-frame" = "libav-frame";
     ptr: false;
 
     /**

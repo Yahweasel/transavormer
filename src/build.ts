@@ -25,15 +25,15 @@ import * as encoder from "./encoder";
 import * as muxer from "./muxer";
 import * as ifs from "./interfaces";
 
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDemuxer): Promise<ifs.Demuxer>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDemuxerPtr): Promise<ifs.DemuxerPtr>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoder): Promise<ifs.Decoder>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoderPtr): Promise<ifs.DecoderPtr>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizer): Promise<ifs.Filter>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizerPtr): Promise<ifs.FilterPtr>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoder): Promise<ifs.Encoder>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoderPtr): Promise<ifs.EncoderPtr>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitMuxer): Promise<ifs.Muxer>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDemuxerPtr): Promise<ifs.PacketStreamPtr>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoder): Promise<ifs.FrameStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoderPtr): Promise<ifs.FrameStreamPtr>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizer): Promise<ifs.LibAVFrameStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizerPtr): Promise<ifs.LibAVFrameStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoder): Promise<ifs.PacketStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoderPtr): Promise<ifs.PacketStreamPtr>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitMuxer): Promise<ifs.FileStream>;
 
 /**
  * Create a transavormer for the requested task.
@@ -63,10 +63,10 @@ export function build(
     throw new Error(`Unrecognized initializer type ${(<any> init).type}`);
 }
 
-function buildDemuxer(libav: LibAVT.LibAV, init: any): Promise<ifs.Demuxer> {
+function buildDemuxer(libav: LibAVT.LibAV, init: any): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
-    if (init.component === "demuxer")
+    if (init.streamType === "packet")
         return Promise.resolve(init);
 
     if (init.type !== "demuxer") {
@@ -83,10 +83,14 @@ function buildDemuxer(libav: LibAVT.LibAV, init: any): Promise<ifs.Demuxer> {
 function buildDecoder(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Decoder> {
+): Promise<ifs.FrameStream> {
     if (init.then)
         return init;
-    if (init.component === "decoder")
+    if (
+        init.streamType === "frame" ||
+        init.streamType === "libav-frame" ||
+        init.streamType === "webcodecs-frame"
+    )
         return Promise.resolve(init);
 
     if (init.type !== "decoder") {
@@ -107,10 +111,10 @@ function buildDecoder(
 function buildNormalizer(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Filter> {
+): Promise<ifs.LibAVFrameStream> {
     if (init.then)
         return init;
-    if (init.component === "filter")
+    if (init.component === "libav-frame")
         return Promise.resolve(init);
 
     if (init.type !== "frame-normalizer") {
@@ -131,10 +135,14 @@ function buildNormalizer(
 function buildFrameStream(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Decoder | ifs.Filter> {
+): Promise<ifs.FrameStream> {
     if (init.then)
         return init;
-    if (init.component === "decoder" || init.component === "filter")
+    if (
+        init.streamType === "frame" ||
+        init.streamType === "libav-frame" ||
+        init.streamType === "webcodecs-frame"
+    )
         return Promise.resolve(init);
 
     if (init.type === "filter") {
@@ -149,10 +157,10 @@ function buildFrameStream(
 function buildEncoder(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Encoder> {
+): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
-    if (init.component === "encoder")
+    if (init.streamType === "packet")
         return Promise.resolve(init);
 
     if (init.type !== "encoder") {
@@ -181,10 +189,10 @@ function buildEncoder(
 function buildPacketStream(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Demuxer | ifs.Encoder> {
+): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
-    if (init.component === "demuxer" || init.component === "encoder")
+    if (init.streamType === "packet")
         return Promise.resolve(init);
 
     if (init.type === "filter" ||
@@ -199,10 +207,10 @@ function buildPacketStream(
 function buildMuxer(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: any
-): Promise<ifs.Muxer> {
+): Promise<ifs.FileStream> {
     if (init.then)
         return init;
-    if (init.component === "muxer")
+    if (init.streamType === "file")
         return Promise.resolve(init);
 
     if (init.type !== "muxer") {

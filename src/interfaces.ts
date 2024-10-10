@@ -59,7 +59,9 @@ export interface WithStream<D> {
     frame: D;
 }
 
-export type WebCodecsStreamFrame = WithStream<wcp.VideoFrame | wcp.AudioData>;
+export type WebCodecsStreamFrame = WithStream<
+    wcp.VideoFrame | VideoFrame | wcp.AudioData
+>;
 export type LibAVStreamFrame = WithStream<LibAVT.Frame>;
 export type LibAVStreamFramePtr = WithStream<number>;
 export type StreamFrame = WebCodecsStreamFrame | LibAVStreamFrame;
@@ -75,93 +77,49 @@ export type StreamParameters = LibAVT.CodecParameters & {
 };
 
 /**
- * Supertype of everything that has multiple streams.
+ * Supertype of every streaming type.
  */
-export interface WithStreams {
+export interface WithStreams<StreamType, StreamElem> {
+    streamType: StreamType;
     streams: Promise<StreamParameters[]>;
-}
-
-
-/**
- * A demuxer, as created by this library.
- */
-export interface Demuxer extends WithStreams {
-    component: "demuxer";
-    ptr: false;
-    stream: ReadableStream<LibAVT.Packet[]>;
+    stream: ReadableStream<StreamElem[]>;
 }
 
 /**
- * A demuxer outputting raw pointers instead of JS-level packets.
+ * Supertype of streaming types that have pointer and non-pointer versions.
  */
-export interface DemuxerPtr extends WithStreams {
-    component: "demuxer";
-    ptr: true;
-    stream: ReadableStream<number[]>;
+export interface WithStreamsPtr<StreamType, StreamElem, Ptr>
+    extends WithStreams<StreamType, StreamElem> {
+    ptr: Ptr;
 }
 
-/**
- * A decoder, as created by this library.
- */
-export interface Decoder extends WithStreams {
-    component: "decoder";
-    ptr: false;
-    stream: ReadableStream<StreamFrame[]>;
-}
 
-/**
- * A decoder outputting raw pointers instead of JS-level frames.
- */
-export interface DecoderPtr extends WithStreams {
-    component: "decoder";
-    ptr: true;
-    stream: ReadableStream<StreamFramePtr[]>;
-}
+// All of the normal stream types
+export type PacketStream = WithStreamsPtr<"packet", LibAVT.Packet, false>;
+export type PacketStreamPtr = WithStreamsPtr<"packet", number, true>;
+export type PacketStreamAny = PacketStream | PacketStreamPtr;
+export type LibAVFrameStream = WithStreamsPtr<
+    "libav-frame", LibAVStreamFrame, false
+>;
+export type LibAVFrameStreamPtr = WithStreamsPtr<
+    "libav-frame", LibAVStreamFramePtr, true
+>;
+export type LibAVFrameStreamAny = LibAVFrameStream | LibAVFrameStreamPtr;
+export type WebCodecsFrameStream = WithStreams<
+    "webcodecs-frame", WebCodecsStreamFrame
+> & {ptr: false};
+export type FrameStream = WithStreamsPtr<
+    "frame" | "libav-frame" | "webcodecs-frame",
+    StreamFrame, false
+>;
+export type FrameStreamPtr = WithStreamsPtr<
+    "frame" | "libav-frame" | "webcodecs-frame",
+    StreamFramePtr, true
+>;
+export type FrameStreamAny = FrameStream | FrameStreamPtr;
 
-/**
- * A filter. Filters always output frames in LibAV format, so a frame normalizer
- * is also a filter.
- */
-export interface Filter extends WithStreams {
-    component: "filter";
-    ptr: false;
-    stream: ReadableStream<LibAVStreamFrame[]>;
-}
-
-/**
- * A filter. Filters always output frames in LibAV format, so a frame normalizer
- * is also a filter.
- */
-export interface FilterPtr extends WithStreams {
-    component: "filter";
-    ptr: true;
-    stream: ReadableStream<LibAVStreamFramePtr[]>;
-}
-
-/**
- * An encoder, as created by this library.
- */
-export interface Encoder extends WithStreams {
-    component: "encoder";
-    ptr: false;
-    stream: ReadableStream<LibAVT.Packet[]>;
-}
-
-/**
- * An encoder outputting raw pointers instead of JS-level packets.
- */
-export interface EncoderPtr extends WithStreams {
-    component: "encoder";
-    ptr: true;
-    stream: ReadableStream<number[]>;
-}
-
-/**
- * A stream muxer, as created by this library.
- */
-export interface Muxer {
-    component: "muxer";
-    randomAccess: boolean;
+export interface FileStream {
+    streamType: "file";
     stream: ReadableStream<{position: number, data: Uint8Array}>;
 }
 
@@ -184,18 +142,13 @@ export interface InitDemuxerPtr {
     input: InputFile;
 }
 
-export type DemuxerLike =
-    InitDemuxer | InitDemuxerPtr |
-    Demuxer | DemuxerPtr |
-    Promise<Demuxer> | Promise<DemuxerPtr>;
-
 /**
  * Initializer for a decoder.
  */
 export interface InitDecoder {
     type: "decoder";
     ptr?: false;
-    input: DemuxerLike;
+    input: InitPacketStream;
 }
 
 /**
@@ -204,14 +157,8 @@ export interface InitDecoder {
 export interface InitDecoderPtr {
     type: "decoder";
     ptr: true;
-    input: DemuxerLike;
+    input: InitPacketStream;
 }
-
-export type DecoderLike =
-    DemuxerLike |
-    InitDecoder | InitDecoderPtr |
-    Decoder | DecoderPtr |
-    Promise<Decoder> | Promise<DecoderPtr>;
 
 /**
  * Initializer for a normalizer.
@@ -219,7 +166,7 @@ export type DecoderLike =
 export interface InitFrameNormalizer {
     type: "frame-normalizer";
     ptr?: false;
-    input: DecoderLike;
+    input: InitFrameStream;
 }
 
 /**
@@ -228,15 +175,8 @@ export interface InitFrameNormalizer {
 export interface InitFrameNormalizerPtr {
     type: "frame-normalizer";
     ptr: true;
-    input: DecoderLike;
+    input: InitFrameStream;
 }
-
-export type FilterLike =
-    DemuxerLike |
-    DecoderLike |
-    InitFrameNormalizer | InitFrameNormalizerPtr |
-    Filter | FilterPtr |
-    Promise<Filter> | Promise<FilterPtr>;
 
 /**
  * Initializer for an encoder.
@@ -244,7 +184,7 @@ export type FilterLike =
 export interface InitEncoder {
     type: "encoder";
     ptr?: false;
-    input: FilterLike;
+    input: InitFrameStream;
     videoConfig?: wcp.VideoEncoderConfig;
     libavVideoConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
     audioConfig?: wcp.AudioEncoderConfig;
@@ -257,18 +197,12 @@ export interface InitEncoder {
 export interface InitEncoderPtr {
     type: "encoder";
     ptr: true;
-    input: FilterLike;
+    input: InitFrameStream;
     videoConfig?: wcp.VideoEncoderConfig;
     libavVideoConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
     audioConfig?: wcp.AudioEncoderConfig;
     libavAudioConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
 }
-
-type EncoderLike =
-    FilterLike |
-    InitEncoder | InitEncoderPtr |
-    Encoder | EncoderPtr |
-    Promise<Encoder> | Promise<EncoderPtr>;
 
 /**
  * Initializer for a muxer.
@@ -277,8 +211,21 @@ export interface InitMuxer {
     type: "muxer";
     format: string | number;
     randomAccess?: boolean;
-    input: EncoderLike;
+    input: InitPacketStream;
 };
+
+
+// Generic initializers
+export type InitPacketStream =
+    InputFile |
+    InitDemuxer | InitDemuxerPtr |
+    InitEncoder | InitEncoderPtr |
+    PacketStreamAny | Promise<PacketStreamAny>;
+
+export type InitFrameStream =
+    InitPacketStream |
+    InitFrameNormalizer | InitFrameNormalizerPtr |
+    FrameStreamAny | Promise<FrameStreamAny>;
 
 
 /**

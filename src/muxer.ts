@@ -36,7 +36,7 @@ let fnCounter = 0;
 /**
  * A generic muxer.
  */
-export class Muxer implements ifs.Muxer {
+export class Muxer implements ifs.FileStream {
     constructor(
         public randomAccess: boolean,
 
@@ -50,7 +50,7 @@ export class Muxer implements ifs.Muxer {
          * @private
          * Input packet stream.
          */
-        private _inputP: Promise<ifs.Demuxer | ifs.Encoder>,
+        private _inputP: Promise<ifs.PacketStreamAny>,
 
         /**
          * @private
@@ -162,8 +162,8 @@ export class Muxer implements ifs.Muxer {
     static async build(
         libav: LibAVT.LibAV,
         init: ifs.InitMuxer,
-        input: Promise<ifs.Demuxer | ifs.Encoder>
-    ): Promise<ifs.Muxer> {
+        input: Promise<ifs.PacketStreamAny>
+    ): Promise<ifs.FileStream> {
         const ret = new Muxer(
             !!init.randomAccess, libav, input, init.format
         );
@@ -171,7 +171,7 @@ export class Muxer implements ifs.Muxer {
         return ret;
     }
 
-    component: "muxer" = "muxer";
+    streamType: "file" = "file";
 
     /**
      * Stream of output data.
