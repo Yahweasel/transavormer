@@ -24,8 +24,8 @@
   "author": "Yahweasel",
   "license": "ISC",
   "devDependencies": {
-    "@libav.js/variant-webcodecs": "^6.0.7",
-    "@libav.js/variant-webm-vp9": "^6.0.7",
+    "@libav.js/variant-webcodecs": "^6.1.7",
+    "@libav.js/variant-webm-vp9": "^6.1.7",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
