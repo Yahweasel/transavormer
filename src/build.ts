@@ -68,6 +68,15 @@ function buildDemuxer(libav: LibAVT.LibAV, init: any): Promise<ifs.Demuxer> {
         return init;
     if (init.component === "demuxer")
         return Promise.resolve(init);
+
+    if (init.type !== "demuxer") {
+        return buildDemuxer(libav, <ifs.InitDemuxerPtr> {
+            type: "demuxer",
+            ptr: true,
+            input: init
+        });
+    }
+
     return demuxer.Demuxer.build(libav, init);
 }
 

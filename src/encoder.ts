@@ -86,7 +86,7 @@ export class Encoder implements ifs.Encoder {
 
         /* We can only fill in codec parameters once we've read a bit, so keep
          * all of them as promises. */
-        const streams: Promise<LibAVT.CodecParameters>[] = [];
+        const streams: Promise<ifs.StreamParameters>[] = [];
 
         // Encoders, per stream
         const encoders: (
@@ -131,28 +131,81 @@ export class Encoder implements ifs.Encoder {
             }
 
             // Perhaps convert the config
+            let codecpar: LibAVT.CodecParameters & LibAVT.AVCodecContextProps;
+            if (inputStream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
+                if (this._init.libavVideoConfig) {
+                    codecpar = <any> this._init.libavVideoConfig;
+                } else if (this._init.videoConfig) {
+                    const config = this._init.videoConfig;
+                    const str = await lawc.configToVideoStream(la, config);
+                    codecpar = await la.ff_copyout_codecpar(str[0]);
+                    await la.avcodec_parameters_free_js(str[0]);
+                } else
+                    throw new Error("Video stream with no video configuration");
+            } else {
+                if (this._init.libavAudioConfig) {
+                    codecpar = <any> this._init.libavAudioConfig;
+                } else if (this._init.audioConfig) {
+                    const config = this._init.audioConfig;
+                    const str = await lawc.configToAudioStream(la, config);
+                    codecpar = await la.ff_copyout_codecpar(str[0]);
+                    await la.avcodec_parameters_free_js(str[0]);
+                } else
+                    throw new Error("Audio stream with no audio configuration");
+            }
+            if (typeof codecpar === "number")
+                codecpar = await la.ff_copyout_codecpar(codecpar);
 
-            // Try libav.js
-            const laei = await la.avcodec_find_encoder(inputStream.codec_id);
-            if (laei < 0)
-                throw new Error(`Failed to find an encoder for codec ${inputStream.codec_id}`);
-            const lad = await la.ff_init_encoder(
-                await la.avcodec_get_name(laei),
+            const laei = await la.avcodec_find_encoder(codecpar.codec_id);
+
+            // Convert to codec context
+            const ctx: LibAVT.AVCodecContextProps = {};
+            for (const key in codecpar) {
+                if (la[`AVCodecContext_${key}_s`])
+                    ctx[key] = codecpar[key];
+            }
+            if (inputStream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
+                if (!("pix_fmt" in ctx))
+                    ctx.pix_fmt = la.AV_PIX_FMT_YUV420P; // FIXME
+                if (!ctx.width)
+                    ctx.width = inputStream.width;
+                if (!ctx.height)
+                    ctx.height = inputStream.height;
+            } else {
+                if (!("sample_fmt" in ctx))
+                    ctx.sample_fmt = await la.AVCodec_sample_fmts_a(laei, 0);
+                if (!ctx.sample_rate)
+                    ctx.sample_rate = inputStream.sample_rate;
+                if (!ctx.channel_layout)
+                    ctx.channel_layout = inputStream.channel_layoutmask;
+            }
+            if (ctx.level < 0)
+                delete ctx.level;
+            if (ctx.profile < 0)
+                delete ctx.profile;
+
+            // Open the encoder
+            const lae = await la.ff_init_encoder(
+                await la.AVCodec_name(laei),
                 {
-                    ctx: inputStream,
+                    ctx,
                     time_base: [1, 1000000]
                 }
             );
-            encoders.push(lad);
+            encoders.push(lae);
             destructors.push(async () => {
-                await la.ff_free_encoder(lad[1], lad[2], lad[3]);
+                await la.ff_free_encoder(lae[1], lae[2], lae[3]);
             });
 
             // Get the codec parameters from it
             const codecparPtr = await la.avcodec_parameters_alloc();
-            await la.avcodec_parameters_from_context(codecparPtr, lad[1]);
-            const codecpar = await la.ff_copyout_codecpar(codecparPtr);
-            streams.push(Promise.resolve(codecpar));
+            await la.avcodec_parameters_from_context(codecparPtr, lae[1]);
+            const spar = <ifs.StreamParameters>
+                await la.ff_copyout_codecpar(codecparPtr);
+            spar.time_base_num = await la.AVCodecContext_time_base_num(lae[1]);
+            spar.time_base_den = await la.AVCodecContext_time_base_den(lae[1]);
+            streams.push(Promise.resolve(spar));
+            await la.avcodec_parameters_free_js(codecparPtr);
         }
         this.streams = Promise.all(streams);
 
@@ -201,12 +254,13 @@ export class Encoder implements ifs.Encoder {
                                         }
                                     );
                                     pkts = await la.ff_encode_multi(
-                                        c, frame, pkt, ffs
+                                        c, frame, pkt, ffs, true
+                                    );
+                                } else {
+                                    pkts = await la.ff_encode_multi(
+                                        c, frame, pkt, [], true
                                     );
                                 }
-                                pkts.push.apply(pkts, await la.ff_encode_multi(
-                                    c, frame, pkt, [], true
-                                ));
                                 for (const packet of pkts) {
                                     packet.stream_index = i;
                                     encodeQueue.push(packet);
@@ -242,17 +296,17 @@ export class Encoder implements ifs.Encoder {
                         const enc = encoders[i];
                         if ((<LibAVEncoder> enc).length) {
                             // libav.js encoder
+                            const [, c, frame, pkt] = <LibAVEncoder> enc;
                             await libavifyFrames(la, lawc, frames);
                             if (!filters[i]) {
                                 filters[i] = await mkFilter(
-                                    la, await streams[i], <any> frames[0]
+                                    la, c, await streams[i], <any> frames[0]
                                 );
                                 destructors.push(async () => {
                                     await la.avfilter_graph_free_js(filters[i][0]);
                                 });
                             }
                             const [, bufferSrc, bufferSink] = filters[i];
-                            const [, c, frame, pkt] = <LibAVEncoder> enc;
                             const ffs = await la.ff_filter_multi(
                                 bufferSrc, bufferSink, frame, <LibAVT.Frame[]> frames, {
                                     copyoutFrame: "ptr"
@@ -263,7 +317,10 @@ export class Encoder implements ifs.Encoder {
                                     copyoutFrame: <any> (this.ptr ? "ptr" : "default")
                                 } */
                             );
-                            encodeQueue.push.apply(encodeQueue, res);
+                            for (const pkt of res) {
+                                pkt.stream_index = i;
+                                encodeQueue.push(pkt);
+                            }
 
                         } else {
                             // WebCodecs encoder
@@ -325,10 +382,8 @@ export class Encoder implements ifs.Encoder {
     /**
      * Streams to which the frames belong.
      */
-    streams: Promise<LibAVT.CodecParameters[]>;
+    streams: Promise<ifs.StreamParameters[]>;
 }
-
-// CONTINUE HERE
 
 /**
  * @private
@@ -339,10 +394,9 @@ async function tryVideoEncoder(
     configAny: any, streamIndex: number,
     inStream: LibAVT.CodecParameters, encodeQueue: LibAVT.Packet[],
     encodeErr: (x: any) => void
-): Promise<[Promise<LibAVT.CodecParameters>, wcp.VideoEncoder]> {
+): Promise<[Promise<ifs.StreamParameters>, wcp.VideoEncoder]> {
     if (
-        !lawc || !configAny || !configAny.codec ||
-        !configAny.width
+        !lawc || !configAny || !configAny.codec
     ) {
         return null;
     }
@@ -356,9 +410,9 @@ async function tryVideoEncoder(
             config.height = inStream.height;
         const stream = await lawc.configToVideoStream(la, config);
         // FIXME: What if there are no packets?
-        let codecparRes: (x:LibAVT.CodecParameters)=>void | null = null;
-        const codecparP = new Promise<LibAVT.CodecParameters>(
-            res => codecparRes = res
+        let sparRes: (x:ifs.StreamParameters)=>void | null = null;
+        const sparP = new Promise<ifs.StreamParameters>(
+            res => sparRes = res
         );
         const enc = new VideoEncoder({
             output: (chunk, metadata) => {
@@ -369,9 +423,13 @@ async function tryVideoEncoder(
                     );
                     encodeQueue.push(pkt);
 
-                    if (codecparRes) {
-                        codecparRes(await la.ff_copyout_codecpar(stream[0]));
-                        codecparRes = null;
+                    if (sparRes) {
+                        const spar = <ifs.StreamParameters>
+                            await la.ff_copyout_codecpar(stream[0]);
+                        spar.time_base_num = 1;
+                        spar.time_base_den = 1000000;
+                        sparRes(spar);
+                        sparRes = null;
                     }
                 }).catch(encodeErr);
             },
@@ -379,7 +437,7 @@ async function tryVideoEncoder(
         });
         enc.configure(<any> config);
         return [
-            codecparP,
+            sparP,
             <wcp.VideoEncoder> <any> enc
         ];
     } catch (ex) {
@@ -397,7 +455,7 @@ async function tryAudioEncoder(
     configAny: any, streamIndex: number,
     inStream: LibAVT.CodecParameters, encodeQueue: LibAVT.Packet[],
     encodeErr: (x: any) => void
-): Promise<[Promise<LibAVT.CodecParameters>, wcp.AudioEncoder]> {
+): Promise<[Promise<ifs.StreamParameters>, wcp.AudioEncoder]> {
     if (!lawc || !configAny || !configAny.codec)
         return null;
 
@@ -409,9 +467,9 @@ async function tryAudioEncoder(
         if (!config.numberOfChannels)
             config.numberOfChannels = inStream.channels;
         const stream = await lawc.configToAudioStream(la, config);
-        let codecparRes: (x:LibAVT.CodecParameters)=>void | null = null;
-        const codecparP = new Promise<LibAVT.CodecParameters>(
-            res => codecparRes = res
+        let sparRes: (x:ifs.StreamParameters)=>void | null = null;
+        const sparP = new Promise<ifs.StreamParameters>(
+            res => sparRes = res
         );
         const enc = new AudioEncoder({
             output: (chunk, metadata) => {
@@ -422,9 +480,13 @@ async function tryAudioEncoder(
                     );
                     encodeQueue.push(pkt);
 
-                    if (codecparRes) {
-                        codecparRes(await la.ff_copyout_codecpar(stream[0]));
-                        codecparRes = null;
+                    if (sparRes) {
+                        const spar = <ifs.StreamParameters>
+                            await la.ff_copyout_codecpar(stream[0]);
+                        spar.time_base_num = 1;
+                        spar.time_base_den = 1000000;
+                        sparRes(spar);
+                        sparRes = null;
                     }
                 }).catch(encodeErr);
             },
@@ -432,7 +494,7 @@ async function tryAudioEncoder(
         });
         enc.configure(config);
         return [
-            codecparP,
+            sparP,
             enc
         ];
     } catch (ex) {
@@ -489,7 +551,7 @@ async function webcodecsifyFrames(
  * Make a filter appropriate to handle this data.
  */
 async function mkFilter(
-    la: LibAVT.LibAV, stream: LibAVT.CodecParameters,
+    la: LibAVT.LibAV, c: number, stream: LibAVT.CodecParameters,
     frameIn: number | LibAVT.Frame
 ) {
     let frame: LibAVT.Frame;
@@ -531,7 +593,8 @@ async function mkFilter(
                 sample_rate: stream.sample_rate,
                 channel_layout: stream.channel_layoutmask,
                 sample_fmt: stream.format,
-                time_base: [1, 1000000]
+                time_base: [1, 1000000],
+                frame_size: await la.AVCodecContext_frame_size(c)
             }
         );
     }

@@ -114,16 +114,14 @@ export class Decoder implements ifs.Decoder {
 
             }
 
-            const ladi = await la.avcodec_find_decoder(stream.codec_id);
-            if (ladi < 0)
-                throw new Error(`Failed to find a decoder for codec ${stream.codec_id}`);
-            const codecpar = await la.avcodec_parameters_alloc();
-            await la.ff_copyin_codecpar(codecpar, stream);
-            const lad = await la.ff_init_decoder(ladi, codecpar);
+            // Initialize the decoder
+            const lad = await la.ff_init_decoder(stream.codec_id, {
+                codecpar: stream,
+                time_base: [stream.time_base_num, stream.time_base_den]
+            });
             decoders.push(lad);
             destructors.push(async () => {
-                await la.ff_free_decoder(lad[0], lad[1], lad[2]);
-                await la.avcodec_parameters_free_js(codecpar);
+                await la.ff_free_decoder(lad[1], lad[2], lad[3]);
             });
         }
 
@@ -146,6 +144,7 @@ export class Decoder implements ifs.Decoder {
 
                     if (demuxEOF) {
                         await cleanup();
+                        controller.close();
                         break;
                     }
 
@@ -291,7 +290,7 @@ export class Decoder implements ifs.Decoder {
     /**
      * Streams to which the frames belong.
      */
-    streams: Promise<LibAVT.CodecParameters[]>;
+    streams: Promise<ifs.StreamParameters[]>;
 }
 
 /**

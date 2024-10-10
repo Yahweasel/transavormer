@@ -170,5 +170,5 @@ export class FrameNormalizer implements ifs.Filter {
     /**
      * Stream data.
      */
-    streams: Promise<LibAVT.CodecParameters[]>;
+    streams: Promise<ifs.StreamParameters[]>;
 }

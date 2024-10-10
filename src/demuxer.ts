@@ -73,15 +73,16 @@ export class Demuxer implements ifs.Demuxer {
 
         if (!la.tavFiles) {
             const tavFiles = la.tavFiles = Object.create(null);
+            la.onread =
+                async (name: string, pos: number, len: number) => {
+                    const f = tavFiles[name];
+                    la.ff_reader_dev_send(name, f ? await f(pos, len) : null);
+                };
             la.onblockread =
                 async (name: string, pos: number, len: number) => {
                     const f = tavFiles[name];
-                    if (!f) {
-                        await la.ff_block_reader_dev_send(name, pos, null);
-                        return;
-                    }
-                    await la.ff_block_reader_dev_send(
-                        name, pos, await f(pos, len)
+                    la.ff_block_reader_dev_send(
+                        name, pos, f ? await f(pos, len) : null
                     );
                 };
         }
@@ -89,7 +90,6 @@ export class Demuxer implements ifs.Demuxer {
         const filename = (fnCounter++) + ".in";
 
         let f = this._input;
-        let stream = false;
         if ((<Blob> f).arrayBuffer) {
             // It's a Blob
             await la.mkreadaheadfile(filename, <Blob> f);
@@ -97,30 +97,11 @@ export class Demuxer implements ifs.Demuxer {
         } else if ((<ReadableStream> f).getReader) {
             // It's a ReadableStream of Uint8Arrays
             const rdr = (<ReadableStream<Uint8Array>> f).getReader();
-            stream = true;
-            let buf: Uint8Array | null = null;
-            f = <ifs.StreamFile> {
-                async read(len) {
-                    while (true) {
-                        if (buf) {
-                            if (buf.length < len) {
-                                const ret = buf;
-                                buf = null;
-                                return ret;
-                            } else {
-                                const ret = buf.slice(0, len);
-                                buf = buf.subarray(len);
-                                return ret;
-                            }
-                        }
-
-                        const rd = await rdr.read();
-                        if (rd.done)
-                            return null;
-                        buf = rd.value!;
-                    }
-                }
+            la.tavFiles[filename] = async (pos: number, len: number) => {
+                const rd = await rdr.read();
+                return rd.done ? null : rd.value!;
             };
+            await la.mkreaderdev(filename);
 
         } else if (typeof (<ifs.RAFile> f).size === "number") {
             // It's a random-access file
@@ -129,28 +110,26 @@ export class Demuxer implements ifs.Demuxer {
 
         } else {
             // It's a stream file
+            la.tavFiles[filename] = (pos: number, len: number) => {
+                return (<ifs.StreamFile> f).read(len);
+            };
             await la.mkreaderdev(filename);
-            stream = true;
 
         }
 
         // Open the file
-        const demuxP = la.ff_init_demuxer_file(filename);
-        if (stream) {
-            while (await la.ff_reader_dev_waiting()) {
-                await la.ff_reader_dev_send(
-                    filename, 
-                    await (<ifs.StreamFile> f).read(chunkSize)
-                );
-            }
-        }
-        const [fmtCtx, streams] = await demuxP;
+        const [fmtCtx, streams] = await la.ff_init_demuxer_file(filename);
 
         // Get the codec info
-        const codecpars: LibAVT.CodecParameters[] = [];
-        for (const stream of streams)
-            codecpars.push(await la.ff_copyout_codecpar(stream.codecpar));
-        this.streams = Promise.resolve(codecpars);
+        const spars: ifs.StreamParameters[] = [];
+        for (const stream of streams) {
+            const spar: ifs.StreamParameters =
+                <ifs.StreamParameters> await la.ff_copyout_codecpar(stream.codecpar);
+            spar.time_base_num = stream.time_base_num;
+            spar.time_base_den = stream.time_base_den;
+            spars.push(spar);
+        }
+        this.streams = Promise.resolve(spars);
 
         const pkt = await la.av_packet_alloc();
 
@@ -159,20 +138,14 @@ export class Demuxer implements ifs.Demuxer {
             async pull(controller) {
                 while (true) {
                     // Read a chunk
-                    const readP = la.ff_read_frame_multi(fmtCtx, pkt, {
-                        limit: chunkSize,
-                        unify: true,
-                        copyoutPacket: <any> (this.ptr ? "ptr" : "default")
-                    });
-                    if (stream) {
-                        while (await la.ff_reader_dev_waiting()) {
-                            await la.ff_reader_dev_send(
-                                filename,
-                                await (<ifs.StreamFile> f).read(chunkSize)
-                            );
+                    const [res, packets] = await la.ff_read_frame_multi(
+                        fmtCtx, pkt,
+                        {
+                            limit: chunkSize,
+                            unify: true,
+                            copyoutPacket: <any> (this.ptr ? "ptr" : "default")
                         }
-                    }
-                    const [res, packets] = await readP;
+                    );
 
                     // Pass it thru
                     let hadPackets = false;
@@ -225,5 +198,5 @@ export class Demuxer implements ifs.Demuxer {
     /**
      * LibAV streams in the file.
      */
-    streams: Promise<LibAVT.CodecParameters[]>;
+    streams: Promise<ifs.StreamParameters[]>;
 }

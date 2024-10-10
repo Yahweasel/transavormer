@@ -67,10 +67,18 @@ export type StreamFramePtr = WebCodecsStreamFrame | LibAVStreamFramePtr;
 
 
 /**
+ * Stream info is provided as CodecParameters plus time base./
+ */
+export type StreamParameters = LibAVT.CodecParameters & {
+    time_base_num: number,
+    time_base_den: number
+};
+
+/**
  * Supertype of everything that has multiple streams.
  */
 export interface WithStreams {
-    streams: Promise<LibAVT.CodecParameters[]>;
+    streams: Promise<StreamParameters[]>;
 }
 
 
@@ -209,18 +217,18 @@ export type DecoderLike =
  * Initializer for a normalizer.
  */
 export interface InitFrameNormalizer {
-    type: "frame-normalizer",
-    ptr?: false,
-    input: DecoderLike
+    type: "frame-normalizer";
+    ptr?: false;
+    input: DecoderLike;
 }
 
 /**
  * Initializer for a pointer-based normalizer.
  */
 export interface InitFrameNormalizerPtr {
-    type: "frame-normalizer",
-    ptr: true,
-    input: DecoderLike
+    type: "frame-normalizer";
+    ptr: true;
+    input: DecoderLike;
 }
 
 export type FilterLike =
@@ -234,22 +242,26 @@ export type FilterLike =
  * Initializer for an encoder.
  */
 export interface InitEncoder {
-    type: "encoder",
-    ptr?: false,
-    input: FilterLike,
-    videoConfig?: wcp.VideoEncoderConfig | LibAVT.CodecParameters | number,
-    audioConfig?: wcp.AudioEncoderConfig | LibAVT.CodecParameters | number
+    type: "encoder";
+    ptr?: false;
+    input: FilterLike;
+    videoConfig?: wcp.VideoEncoderConfig;
+    libavVideoConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
+    audioConfig?: wcp.AudioEncoderConfig;
+    libavAudioConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
 }
 
 /**
  * Initializer for a pointer-based encoder.
  */
 export interface InitEncoderPtr {
-    type: "encoder",
-    ptr: true,
-    input: FilterLike,
-    videoConfig?: wcp.VideoEncoderConfig | LibAVT.CodecParameters | number,
-    audioConfig?: wcp.AudioEncoderConfig | LibAVT.CodecParameters | number
+    type: "encoder";
+    ptr: true;
+    input: FilterLike;
+    videoConfig?: wcp.VideoEncoderConfig;
+    libavVideoConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
+    audioConfig?: wcp.AudioEncoderConfig;
+    libavAudioConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
 }
 
 type EncoderLike =
@@ -262,10 +274,10 @@ type EncoderLike =
  * Initializer for a muxer.
  */
 export interface InitMuxer {
-    type: "muxer",
-    format: string | number,
-    randomAccess?: boolean,
-    input: EncoderLike
+    type: "muxer";
+    format: string | number;
+    randomAccess?: boolean;
+    input: EncoderLike;
 };
 
 
