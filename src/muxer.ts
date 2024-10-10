@@ -171,6 +171,7 @@ export class Muxer implements ifs.FileStream {
         return ret;
     }
 
+    component: ifs.Component = "muxer";
     streamType: "file" = "file";
 
     /**

@@ -187,6 +187,7 @@ export class Demuxer implements ifs.PacketStream {
         return <any> ret;
     }
 
+    component: ifs.Component = "demuxer";
     streamType: "packet" = "packet";
     ptr: false;
 

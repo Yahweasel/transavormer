@@ -26,6 +26,7 @@ export type LibAVStreamFramePtr = ifs.LibAVStreamFramePtr;
 export type StreamFrame = ifs.StreamFrame;
 export type StreamFramePtr = ifs.StreamFramePtr;
 export type StreamParameters = ifs.StreamParameters;
+export type Component = ifs.Component;
 export type PacketStream = ifs.PacketStream;
 export type PacketStreamPtr = ifs.PacketStreamPtr;
 export type PacketStreamAny = ifs.PacketStreamAny;

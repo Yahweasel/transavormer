@@ -363,6 +363,7 @@ export class Encoder implements ifs.PacketStream {
         return <any> ret;
     }
 
+    component: ifs.Component = "encoder";
     streamType: "packet" = "packet";
     ptr: false;
 

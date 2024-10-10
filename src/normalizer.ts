@@ -159,6 +159,7 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
         return <any> ret;
     }
 
+    component: ifs.Component = "frame-normalizer";
     streamType: "libav-frame" = "libav-frame";
     ptr: false;
 

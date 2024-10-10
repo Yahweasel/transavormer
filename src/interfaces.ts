@@ -69,7 +69,7 @@ export type StreamFramePtr = WebCodecsStreamFrame | LibAVStreamFramePtr;
 
 
 /**
- * Stream info is provided as CodecParameters plus time base./
+ * Stream info is provided as CodecParameters plus time base.
  */
 export type StreamParameters = LibAVT.CodecParameters & {
     time_base_num: number,
@@ -77,9 +77,22 @@ export type StreamParameters = LibAVT.CodecParameters & {
 };
 
 /**
+ * All component types.
+ */
+export type Component =
+    "packet-stream" | "demuxer" |
+    "packet-selector" |
+    "frame-stream" | "decoder" |
+    "frame-selector" |
+    "frame-normalizer" | "filter" |
+    "encoder" |
+    "file-stream" | "muxer";
+
+/**
  * Supertype of every streaming type.
  */
 export interface WithStreams<StreamType, StreamElem> {
+    component: Component;
     streamType: StreamType;
     streams: Promise<StreamParameters[]>;
     stream: ReadableStream<StreamElem[]>;
@@ -119,6 +132,7 @@ export type FrameStreamPtr = WithStreamsPtr<
 export type FrameStreamAny = FrameStream | FrameStreamPtr;
 
 export interface FileStream {
+    component: Component;
     streamType: "file";
     stream: ReadableStream<{position: number, data: Uint8Array}>;
 }

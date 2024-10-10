@@ -279,6 +279,7 @@ export class Decoder implements ifs.FrameStream {
         return <any> ret;
     }
 
+    component: ifs.Component = "decoder";
     streamType: "frame" = "frame";
     ptr: false;
 
