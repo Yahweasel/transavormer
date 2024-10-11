@@ -105,7 +105,7 @@ export class Muxer implements ifs.FileStream {
         for (const stream of streams) {
             const codecpar = await la.avcodec_parameters_alloc();
             await la.ff_copyin_codecpar(codecpar, stream);
-            muxStreams.push([codecpar, 1, 1000000]);
+            muxStreams.push([codecpar, stream.time_base_num, stream.time_base_den]);
         }
         const [fmtCtx, , pb, outStreams] = await la.ff_init_muxer({
             oformat: (typeof this._format === "number")
