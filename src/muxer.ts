@@ -96,7 +96,7 @@ export class Muxer implements ifs.FileStream {
         // Buffer for output
         const outBuf: [number, Uint8Array][] = [];
         la.tavOutputs[filename] = (position: number, data: Uint8Array) => {
-            outBuf.push([position, data]);
+            outBuf.push([position, data.byteOffset ? data.slice(0) : data]);
         };
         let eof = false;
 
