@@ -25,8 +25,8 @@
 
 const fs = require("fs/promises");
 
-const LibAV = require("../node_modules/@libav.js/variant-webcodecs/dist/libav-webcodecs.js");
-const wcb = require("../node_modules/libavjs-webcodecs-bridge/dist/libavjs-webcodecs-bridge.js");
+const LibAV = require("@libav.js/variant-webcodecs");
+const wcb = require("libavjs-webcodecs-bridge");
 const tav = require("../dist/transavormer.js");
 
 async function main() {
