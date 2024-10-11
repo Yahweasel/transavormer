@@ -243,24 +243,29 @@ export class Encoder implements ifs.PacketStream {
                             if ((<LibAVEncoder> enc).length) {
                                 let pkts: LibAVT.Packet[];
                                 const [, c, frame, pkt] = <LibAVEncoder> enc;
+                                let ffs: number[];
                                 if (filters[i]) {
                                     const [, bufferSrc, bufferSink] = filters[i];
-                                    const ffs = await la.ff_filter_multi(
+                                    ffs = await la.ff_filter_multi(
                                         bufferSrc, bufferSink, frame, [], {
                                             fin: true,
                                             copyoutFrame: "ptr"
                                         }
                                     );
-                                    pkts = await la.ff_encode_multi(
-                                        c, frame, pkt, ffs, true
-                                    );
                                 } else {
-                                    pkts = await la.ff_encode_multi(
-                                        c, frame, pkt, [], true
-                                    );
+                                    ffs = [];
                                 }
+                                pkts = await la.ff_encode_multi(
+                                    c, frame, pkt, ffs, {
+                                        fin: true,
+                                        copyoutPacket: <any> (this.ptr ? "ptr" : "default")
+                                    }
+                                );
                                 for (const packet of pkts) {
-                                    packet.stream_index = i;
+                                    if (this.ptr)
+                                        await la.AVPacket_stream_index_s(<number> <any> packet, i);
+                                    else
+                                        packet.stream_index = i;
                                     encodeQueue.push(packet);
                                 }
 
@@ -314,12 +319,15 @@ export class Encoder implements ifs.PacketStream {
                                 }
                             );
                             const res = await la.ff_encode_multi(
-                                c, frame, pkt, ffs, /* FIXME {
-                                    copyoutFrame: <any> (this.ptr ? "ptr" : "default")
-                                } */
+                                c, frame, pkt, ffs, {
+                                    copyoutPacket: <any> (this.ptr ? "ptr" : "default")
+                                }
                             );
                             for (const pkt of res) {
-                                pkt.stream_index = i;
+                                if (this.ptr)
+                                    await la.AVPacket_stream_index_s(<number> <any> pkt, i);
+                                else
+                                    pkt.stream_index = i;
                                 encodeQueue.push(pkt);
                             }
 
