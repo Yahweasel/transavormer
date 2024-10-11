@@ -267,7 +267,7 @@ export class Decoder implements ifs.FrameStream {
         input: Promise<ifs.PacketStreamAny>
     ): Promise<ifs.FrameStreamAny> {
         const ret = new Decoder(
-            init.ptr, libav, lawc, input
+            !!init.ptr, libav, lawc, input
         );
         await ret._init();
         return <any> ret;

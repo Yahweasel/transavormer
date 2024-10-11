@@ -121,7 +121,7 @@ export class Muxer implements ifs.FileStream {
 
         // Create the data stream
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 while (true) {
                     if (outBuf.length) {
                         while (outBuf.length) {

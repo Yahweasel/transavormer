@@ -135,7 +135,7 @@ export class Demuxer implements ifs.PacketStream {
 
         // Create the packet stream
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 while (true) {
                     // Read a chunk
                     const [res, packets] = await la.ff_read_frame_multi(
@@ -181,7 +181,7 @@ export class Demuxer implements ifs.PacketStream {
         init: ifs.InitDemuxer | ifs.InitDemuxerPtr
     ): Promise<ifs.PacketStreamAny> {
         const ret = new Demuxer(
-            init.ptr, libav, init.input
+            !!init.ptr, libav, init.input
         );
         await ret._init();
         return <any> ret;

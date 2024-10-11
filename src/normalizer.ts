@@ -62,7 +62,7 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
         this.streams = input.streams;
 
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 const rd = await packetStream.read();
                 if (rd.done) {
                     controller.close();
@@ -153,7 +153,7 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStreamAny> {
         const ret = new FrameNormalizer(
-            init.ptr, libav, lawc, input,
+            !!init.ptr, libav, lawc, input,
         );
         await ret._init();
         return <any> ret;

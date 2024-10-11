@@ -209,7 +209,7 @@ export class Encoder implements ifs.PacketStream {
 
         // Create the stream
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 while (true) {
                     if (encodeErr) {
                         await cleanup();

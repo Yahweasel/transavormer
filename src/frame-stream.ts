@@ -41,7 +41,7 @@ export class UserFrameStream implements ifs.FrameStream {
         const rdr = init.input.getReader();
 
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 const rd = await rdr.read();
 
                 if (rd.done) {
