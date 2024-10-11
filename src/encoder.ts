@@ -582,7 +582,7 @@ async function mkFilter(
         );
     } else {
         return await la.ff_init_filter_graph(
-            "anull",
+            "aresample",
             {
                 sample_rate: frame.sample_rate,
                 channel_layout: frame.channel_layout,
@@ -594,7 +594,7 @@ async function mkFilter(
                 sample_rate: stream.sample_rate,
                 channel_layout: stream.channel_layoutmask,
                 sample_fmt: stream.format,
-                time_base: [1, 1000000],
+                time_base: [1, stream.sample_rate!],
                 frame_size: await la.AVCodecContext_frame_size(c)
             }
         );
