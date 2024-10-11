@@ -31,7 +31,7 @@ export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | u
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoder): Promise<ifs.FrameStream>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDecoderPtr): Promise<ifs.FrameStreamPtr>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizer): Promise<ifs.LibAVFrameStream>;
-export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizerPtr): Promise<ifs.LibAVFrameStream>;
+export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitFrameNormalizerPtr): Promise<ifs.LibAVFrameStreamPtr>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoder): Promise<ifs.PacketStream>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitEncoderPtr): Promise<ifs.PacketStreamPtr>;
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitMuxer): Promise<ifs.FileStream>;
