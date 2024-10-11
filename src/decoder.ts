@@ -182,13 +182,11 @@ export class Decoder implements ifs.FrameStream {
 
                     // Group packets by stream
                     const laPackets: Record<number, (number | LibAVT.Packet)[]> = {};
-                    const freePackets: number[] = [];
                     for (const packet of inPackets.value) {
                         let streamIndex = -1;
                         if (typeof packet === "number") {
                             // Pointer packet
                             streamIndex = await la.AVPacket_stream_index(packet);
-                            freePackets.push(packet);
                         } else {
                             streamIndex = packet.stream_index!;
                         }
@@ -246,10 +244,6 @@ export class Decoder implements ifs.FrameStream {
                             }
                         }
                     }
-
-                    // Free packets that were temporary
-                    for (const packet of freePackets)
-                        await la.av_packet_free_js(packet);
                 }
             }
         });
