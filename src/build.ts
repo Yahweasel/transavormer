@@ -49,16 +49,16 @@ export function build(
 ): Promise<any> {
     switch (init.type) {
         case "demuxer":
-            return buildDemuxer(libav, init);
+            return buildDemuxer(libav, init, !!init.ptr);
 
         case "decoder":
-            return buildDecoder(libav, lawc, init);
+            return buildDecoder(libav, lawc, init, !!init.ptr);
 
         case "frame-normalizer":
-            return buildNormalizer(libav, lawc, init);
+            return buildNormalizer(libav, lawc, init, !!init.ptr);
 
         case "encoder":
-            return buildEncoder(libav, lawc, init);
+            return buildEncoder(libav, lawc, init, !!init.ptr);
 
         case "muxer":
             return buildMuxer(libav, lawc, init);
@@ -76,26 +76,28 @@ export function build(
     throw new Error(`Unrecognized initializer type ${(<any> init).type}`);
 }
 
-function buildDemuxer(libav: LibAVT.LibAV, init: any): Promise<ifs.PacketStream> {
+function buildDemuxer(
+    libav: LibAVT.LibAV, init: any, ptr: boolean
+): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
     if (init.streamType === "packet")
         return Promise.resolve(init);
 
     if (init.type !== "demuxer") {
-        return buildDemuxer(libav, <ifs.InitDemuxerPtr> {
+        return buildDemuxer(libav, <ifs.InitDemuxer> {
             type: "demuxer",
-            ptr: true,
             input: init
-        });
+        }, ptr);
     }
 
+    init.ptr = ptr;
     return demuxer.Demuxer.build(libav, init);
 }
 
 function buildDecoder(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-    init: any
+    init: any, ptr: boolean
 ): Promise<ifs.FrameStream> {
     if (init.then)
         return init;
@@ -107,23 +109,21 @@ function buildDecoder(
         return Promise.resolve(init);
 
     if (init.type !== "decoder") {
-        const ptr = init.ptr;
-        init.ptr = true;
         return buildDecoder(libav, lawc, <ifs.InitDecoder> {
             type: "decoder",
-            ptr,
             input: init
-        });
+        }, ptr);
     }
 
+    init.ptr = ptr;
     return decoder.Decoder.build(
-        libav, lawc, init, buildDemuxer(libav, init.input)
+        libav, lawc, init, buildDemuxer(libav, init.input, true)
     );
 }
 
 function buildNormalizer(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-    init: any
+    init: any, ptr: boolean
 ): Promise<ifs.LibAVFrameStream> {
     if (init.then)
         return init;
@@ -131,23 +131,21 @@ function buildNormalizer(
         return Promise.resolve(init);
 
     if (init.type !== "frame-normalizer") {
-        const ptr = init.ptr;
-        init.ptr = true;
         return buildNormalizer(libav, lawc, <ifs.InitFrameNormalizer> {
             type: "frame-normalizer",
-            ptr,
             input: init
-        });
+        }, ptr);
     }
 
+    init.ptr = ptr;
     return norm.FrameNormalizer.build(
-        libav, lawc, init, buildDecoder(libav, lawc, init.input)
+        libav, lawc, init, buildDecoder(libav, lawc, init.input, true)
     );
 }
 
 function buildFrameStream(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-    init: any
+    init: any, ptr: boolean
 ): Promise<ifs.FrameStream> {
     if (init.then)
         return init;
@@ -161,15 +159,15 @@ function buildFrameStream(
     if (init.type === "filter") {
         throw new Error("lolwhoops no filters yet");
     } else if (init.type === "frame-normalizer") {
-        return buildNormalizer(libav, lawc, init);
+        return buildNormalizer(libav, lawc, init, ptr || !!init.ptr);
     } else {
-        return buildDecoder(libav, lawc, init);
+        return buildDecoder(libav, lawc, init, ptr || !!init.ptr);
     }
 }
 
 function buildEncoder(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-    init: any
+    init: any, ptr: boolean
 ): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
@@ -177,11 +175,8 @@ function buildEncoder(
         return Promise.resolve(init);
 
     if (init.type !== "encoder") {
-        const ptr = init.ptr;
-        init.ptr = true;
         return buildEncoder(libav, lawc, <ifs.InitEncoder> {
             type: "encoder",
-            ptr,
             videoConfig: <wcp.VideoEncoderConfig> {
                 codec: "vp09.00.10.08.03.1.1.1.0",
                 width: 0,
@@ -191,17 +186,18 @@ function buildEncoder(
                 codec: "opus"
             },
             input: init
-        });
+        }, ptr);
     }
 
+    init.ptr = ptr;
     return encoder.Encoder.build(
-        libav, lawc, init, buildFrameStream(libav, lawc, init.input)
+        libav, lawc, init, buildFrameStream(libav, lawc, init.input, true)
     );
 }
 
 function buildPacketStream(
     libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
-    init: any
+    init: any, ptr: boolean
 ): Promise<ifs.PacketStream> {
     if (init.then)
         return init;
@@ -211,9 +207,9 @@ function buildPacketStream(
     if (init.type === "filter" ||
         init.type === "frame-normalizer" ||
         init.type === "encoder") {
-        return buildEncoder(libav, lawc, init);
+        return buildEncoder(libav, lawc, init, ptr || !!init.ptr);
     } else {
-        return buildDemuxer(libav, init);
+        return buildDemuxer(libav, init, ptr || !!init.ptr);
     }
 }
 
@@ -236,7 +232,7 @@ function buildMuxer(
     }
 
     return muxer.Muxer.build(
-        libav, init, buildPacketStream(libav, lawc, init.input)
+        libav, init, buildPacketStream(libav, lawc, init.input, true)
     );
 }
 
@@ -267,7 +263,7 @@ export function buildUserMonoFrameStream(
 ): Promise<ifs.FrameStreamAny> {
     const rdr = init.input.getReader();
     const rs = new ReadableStream<ifs.StreamFrame[]>({
-        async pull(controller) {
+        pull: async (controller) => {
             const rd = await rdr.read();
             if (rd.done) {
                 controller.close();

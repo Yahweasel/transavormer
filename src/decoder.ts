@@ -127,7 +127,7 @@ export class Decoder implements ifs.FrameStream {
 
         // Create the stream
         this.stream = new ReadableStream({
-            async pull(controller) {
+            pull: async (controller) => {
                 while (true) {
                     if (decodeErr) {
                         await cleanup();
