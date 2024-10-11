@@ -242,7 +242,7 @@ export interface InitUserPacketStream {
  */
 export interface InitUserFrameStream {
     type: "frame-stream";
-    streamTypes: ("video"|"audio")[];
+    streams: Partial<StreamParameters>[];
     input: ReadableStream<StreamFrame[]>;
 }
 
@@ -251,7 +251,7 @@ export interface InitUserFrameStream {
  */
 export interface InitUserMonoFrameStream {
     type: "mono-frame-stream";
-    streamType: "video"|"audio";
+    stream: Partial<StreamParameters>;
     input: ReadableStream<(
         number | LibAVT.Frame |
         wcp.VideoFrame | VideoFrame | wcp.AudioData

@@ -23,6 +23,7 @@ import * as decoder from "./decoder";
 import * as norm from "./normalizer";
 import * as encoder from "./encoder";
 import * as muxer from "./muxer";
+import * as frameStream from "./frame-stream";
 import * as ifs from "./interfaces";
 
 export function build(libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | unknown, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
@@ -66,10 +67,10 @@ export function build(
             return buildUserPacketStream(init);
 
         case "frame-stream":
-            return buildUserFrameStream(init);
+            return buildUserFrameStream(libav, lawc, init);
 
         case "mono-frame-stream":
-            return buildUserMonoFrameStream(init);
+            return buildUserMonoFrameStream(libav, lawc, init);
     }
 
     throw new Error(`Unrecognized initializer type ${(<any> init).type}`);
@@ -252,29 +253,16 @@ export function buildUserPacketStream(
 }
 
 export function buildUserFrameStream(
+    libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: ifs.InitUserFrameStream
 ): Promise<ifs.FrameStreamAny> {
-    return Promise.resolve({
-        component: "frame-stream",
-        ptr: false,
-        streams: Promise.resolve(init.streamTypes.map(x => {
-            let ret: ifs.StreamParameters = {
-                codec_id: 0,
-                codec_type: 0 /* AVMEDIA_TYPE_AUDIO */,
-                format: 0,
-                time_base_num: 1,
-                time_base_den: 1000000
-            };
-            if (x === "video")
-                ret.codec_type = 1 /* AVMEDIA_TYPE_VIDEO */;
-            return ret;
-        })),
-        streamType: "frame",
-        stream: <any> init.input
-    });
+    return Promise.resolve(new frameStream.UserFrameStream(
+        libav, lawc!, init
+    ));
 }
 
 export function buildUserMonoFrameStream(
+    libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
     init: ifs.InitUserMonoFrameStream
 ): Promise<ifs.FrameStreamAny> {
     const rdr = init.input.getReader();
@@ -292,9 +280,9 @@ export function buildUserMonoFrameStream(
         }
     });
 
-    return buildUserFrameStream({
+    return buildUserFrameStream(libav, lawc, {
         type: "frame-stream",
-        streamTypes: [init.streamType],
+        streams: [init.stream],
         input: rs
     });
 }
