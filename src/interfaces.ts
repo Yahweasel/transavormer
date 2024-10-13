@@ -203,9 +203,17 @@ export interface InitLAFilter {
      */
     videoFilters?: string;
     /**
+     * Video filter result settings.
+     */
+    videoIOSettings?: Partial<LibAVT.FilterIOSettings>;
+    /**
      * Audio filter(graph) description.
      */
     audioFilters?: string;
+    /**
+     * Audio filter result settings.
+     */
+    audioIOSettings?: Partial<LibAVT.FilterIOSettings>;
     input: InitFrameStream;
 }
 
@@ -216,7 +224,9 @@ export interface InitLAFilterPtr {
     type: "la-filter";
     ptr: true;
     videoFilters?: string;
+    videoIOSettings?: Partial<LibAVT.FilterIOSettings>;
     audioFilters?: string;
+    audioIOSettings?: Partial<LibAVT.FilterIOSettings>;
     input: InitFrameStream;
 }
 
@@ -308,6 +318,7 @@ export type Init =
     InitDemuxer | InitDemuxerPtr |
     InitDecoder | InitDecoderPtr |
     InitFrameNormalizer | InitFrameNormalizerPtr |
+    InitLAFilter | InitLAFilterPtr |
     InitEncoder | InitEncoderPtr |
     InitMuxer |
     InitUserPacketStream |

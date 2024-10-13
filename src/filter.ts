@@ -125,12 +125,16 @@ export class LAFilter implements ifs.LibAVFrameStream {
 
                         if (!filters[i]) {
                             let descr: string;
-                            if (streams[i].codec_type === la.AVMEDIA_TYPE_VIDEO)
+                            let ios: Partial<LibAVT.FilterIOSettings>;
+                            if (streams[i].codec_type === la.AVMEDIA_TYPE_VIDEO) {
                                 descr = this._init.videoFilters || "null";
-                            else
+                                ios = this._init.videoIOSettings || {};
+                            } else {
                                 descr = this._init.audioFilters || "aresample";
+                                ios = this._init.audioIOSettings || {};
+                            }
                             filters[i] = await mkFilter(
-                                la, descr, streams[i], <any> frames[0]
+                                la, descr, ios, streams[i], <any> frames[0]
                             );
                             destructors.push(async () => {
                                 await la.avfilter_graph_free_js(filters[i][0]);
@@ -209,8 +213,8 @@ export class LAFilter implements ifs.LibAVFrameStream {
  * Make the given filter.
  */
 async function mkFilter(
-    la: LibAVT.LibAV, descr: string, stream: LibAVT.CodecParameters,
-    frameIn: number | LibAVT.Frame
+    la: LibAVT.LibAV, descr: string, ios: Partial<LibAVT.FilterIOSettings>,
+    stream: LibAVT.CodecParameters, frameIn: number | LibAVT.Frame
 ) {
     let frame: LibAVT.Frame;
     if (typeof frameIn === "number")
@@ -219,6 +223,16 @@ async function mkFilter(
         frame = frameIn;
 
     if (stream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
+        const oios: LibAVT.FilterIOSettings = {
+            type: la.AVMEDIA_TYPE_VIDEO,
+            width: frame.width,
+            height: frame.height,
+            pix_fmt: frame.format,
+            time_base: frame.time_base_num
+                ? [frame.time_base_num, frame.time_base_den]
+                : [1, 1000000]
+        };
+        Object.assign(oios, ios);
         return await la.ff_init_filter_graph(
             descr,
             {
@@ -229,17 +243,16 @@ async function mkFilter(
                 time_base: frame.time_base_num
                     ? [frame.time_base_num, frame.time_base_den]
                     : void 0
-            }, {
-                type: la.AVMEDIA_TYPE_VIDEO,
-                width: frame.width,
-                height: frame.height,
-                pix_fmt: frame.format,
-                time_base: frame.time_base_num
-                    ? [frame.time_base_num, frame.time_base_den]
-                    : [1, 1000000]
-            }
+            }, oios
         );
     } else {
+        const oios: LibAVT.FilterIOSettings = {
+            sample_rate: frame.sample_rate,
+            channel_layout: frame.channel_layout,
+            sample_fmt: frame.format,
+            time_base: [1, frame.sample_rate!]
+        };
+        Object.assign(oios, ios);
         return await la.ff_init_filter_graph(
             descr,
             {
@@ -249,12 +262,7 @@ async function mkFilter(
                 time_base: frame.time_base_num
                     ? [frame.time_base_num, frame.time_base_den]
                     : void 0
-            }, {
-                sample_rate: frame.sample_rate,
-                channel_layout: frame.channel_layout,
-                sample_fmt: frame.format,
-                time_base: [1, frame.sample_rate!]
-            }
+            }, oios
         );
     }
 }
