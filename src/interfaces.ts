@@ -84,7 +84,7 @@ export type Component =
     "packet-selector" |
     "frame-stream" | "decoder" |
     "frame-selector" |
-    "frame-normalizer" | "filter" |
+    "frame-normalizer" | "la-filter" |
     "encoder" |
     "file-stream" | "muxer";
 
@@ -189,6 +189,34 @@ export interface InitFrameNormalizer {
 export interface InitFrameNormalizerPtr {
     type: "frame-normalizer";
     ptr: true;
+    input: InitFrameStream;
+}
+
+/**
+ * Initializer for a libav.js filter.
+ */
+export interface InitLAFilter {
+    type: "la-filter";
+    ptr?: false;
+    /**
+     * Video filter(graph) description.
+     */
+    videoFilters?: string;
+    /**
+     * Audio filter(graph) description.
+     */
+    audioFilters?: string;
+    input: InitFrameStream;
+}
+
+/**
+ * Initializer for a libav.js filter, pointer mode.
+ */
+export interface InitLAFilterPtr {
+    type: "la-filter";
+    ptr: true;
+    videoFilters?: string;
+    audioFilters?: string;
     input: InitFrameStream;
 }
 

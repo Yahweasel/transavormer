@@ -21,6 +21,7 @@ import type * as wcp from "libavjs-webcodecs-polyfill";
 import * as demuxer from "./demuxer";
 import * as decoder from "./decoder";
 import * as norm from "./normalizer";
+import * as filter from "./filter";
 import * as encoder from "./encoder";
 import * as muxer from "./muxer";
 import * as frameStream from "./frame-stream";
@@ -56,6 +57,9 @@ export function build(
 
         case "frame-normalizer":
             return buildNormalizer(libav, lawc, init, !!init.ptr);
+
+        case "la-filter":
+            return buildLAFilter(libav, lawc, init, !!init.ptr);
 
         case "encoder":
             return buildEncoder(libav, lawc, init, !!init.ptr);
@@ -127,7 +131,7 @@ function buildNormalizer(
 ): Promise<ifs.LibAVFrameStream> {
     if (init.then)
         return init;
-    if (init.component === "libav-frame")
+    if (init.streamType === "libav-frame")
         return Promise.resolve(init);
 
     if (init.type !== "frame-normalizer") {
@@ -140,6 +144,26 @@ function buildNormalizer(
     init.ptr = ptr;
     return norm.FrameNormalizer.build(
         libav, lawc, init, buildDecoder(libav, lawc, init.input, true)
+    );
+}
+
+function buildLAFilter(
+    libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+    init: any, ptr: boolean
+): Promise<ifs.LibAVFrameStream> {
+    if (init.then)
+        return init;
+
+    if (init.type !== "la-filter") {
+        return buildLAFilter(libav, lawc, <ifs.InitLAFilter> {
+            type: "la-filter",
+            input: init
+        }, ptr);
+    }
+
+    init.ptr = ptr;
+    return filter.LAFilter.build(
+        libav, lawc, init, buildFrameStream(libav, lawc, init.input, true)
     );
 }
 
