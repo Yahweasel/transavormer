@@ -15,7 +15,6 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridgeT from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 /**

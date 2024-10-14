@@ -15,7 +15,7 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridge from "libavjs-webcodecs-bridge";
+import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as ifs from "./interfaces";
@@ -35,12 +35,6 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
 
         /**
          * @private
-         * WebCodecs bridge.
-         */
-        private _lawc: typeof LibAVWebCodecsBridge | undefined,
-
-        /**
-         * @private
          * Input frames.
          */
         private _inputP: Promise<ifs.FrameStreamAny>
@@ -56,7 +50,6 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
      */
     private async _init() {
         const la = this._libav;
-        const lawc = this._lawc!;
         const input = await this._inputP;
         const packetStream = input.stream.getReader();
         this.streams = input.streams;
@@ -134,12 +127,12 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
     }
 
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitFrameNormalizer,
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStream>;
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitFrameNormalizerPtr,
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStreamPtr>;
@@ -148,12 +141,12 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
      * Build a normalizer.
      */
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitFrameNormalizer | ifs.InitFrameNormalizerPtr,
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStreamAny> {
         const ret = new FrameNormalizer(
-            !!init.ptr, libav, lawc, input,
+            !!init.ptr, libav, input,
         );
         await ret._init();
         return <any> ret;

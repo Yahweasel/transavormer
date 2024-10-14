@@ -2,6 +2,7 @@
     "compilerOptions": {
         "strict": false,
         "target": "es5",
+        "module": "commonjs",
         "moduleResolution": "node",
         "lib": ["es2015", "dom"]
     }

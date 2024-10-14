@@ -15,7 +15,7 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridge from "libavjs-webcodecs-bridge";
+import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as ifs from "./interfaces";
@@ -40,12 +40,6 @@ export class Decoder implements ifs.FrameStream {
 
         /**
          * @private
-         * libavjs-webcodecs-bridge instance.
-         */
-        private _lawc: typeof LibAVWebCodecsBridge | undefined,
-
-        /**
-         * @private
          * Demuxed input.
          */
         private _inputP: Promise<ifs.PacketStreamAny>
@@ -61,7 +55,6 @@ export class Decoder implements ifs.FrameStream {
      */
     private async _init() {
         const la = this._libav;
-        const lawc = this._lawc;
         const demuxer = await this._inputP;
         this.streams = demuxer.streams;
         const streams = await demuxer.streams;
@@ -89,7 +82,7 @@ export class Decoder implements ifs.FrameStream {
             const stream = streams[streamIndex];
             if (stream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
                 const wcd = await tryVideoDecoder(
-                    la, lawc, streamIndex, stream, decodeQueue, setDecodeErr
+                    la, streamIndex, stream, decodeQueue, setDecodeErr
                 );
                 if (wcd) {
                     decoders.push(wcd);
@@ -99,7 +92,7 @@ export class Decoder implements ifs.FrameStream {
 
             } else if (stream.codec_type === la.AVMEDIA_TYPE_AUDIO) {
                 const wcd = await tryAudioDecoder(
-                    la, lawc, streamIndex, stream, decodeQueue, setDecodeErr
+                    la, streamIndex, stream, decodeQueue, setDecodeErr
                 );
                 if (wcd) {
                     decoders.push(wcd);
@@ -227,13 +220,13 @@ export class Decoder implements ifs.FrameStream {
                                     packet = await la.ff_copyout_packet(packet);
                                 }
                                 if (stream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
-                                    const evd = lawc!.packetToEncodedVideoChunk(
+                                    const evd = lawc.packetToEncodedVideoChunk(
                                         packet, <any> packet
                                     );
                                     wcd.decode(evd);
                                 } else {
                                     // Audio
-                                    const ead = lawc!.packetToEncodedAudioChunk(
+                                    const ead = lawc.packetToEncodedAudioChunk(
                                         packet, <any> packet
                                     );
                                     wcd.decode(ead);
@@ -250,11 +243,11 @@ export class Decoder implements ifs.FrameStream {
     }
 
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitDecoder, input: Promise<ifs.PacketStreamAny>
     ): Promise<ifs.FrameStream>;
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitDecoderPtr, input: Promise<ifs.PacketStreamAny>
     ): Promise<ifs.FrameStreamPtr>;
 
@@ -262,12 +255,12 @@ export class Decoder implements ifs.FrameStream {
      * Build a decoder.
      */
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitDecoder | ifs.InitDecoderPtr,
         input: Promise<ifs.PacketStreamAny>
     ): Promise<ifs.FrameStreamAny> {
         const ret = new Decoder(
-            !!init.ptr, libav, lawc, input
+            !!init.ptr, libav, input
         );
         await ret._init();
         return <any> ret;
@@ -293,14 +286,11 @@ export class Decoder implements ifs.FrameStream {
  * Try to get a VideoDecoder instance for this stream.
  */
 async function tryVideoDecoder(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+    la: LibAVT.LibAV,
     streamIndex: number,
     stream: LibAVT.CodecParameters, decodeQueue: ifs.StreamFrame[],
     decodeErr: (x: any) => void
 ) {
-    if (!lawc)
-        return null;
-
     try {
         const config = await lawc.videoStreamToConfig(la, stream);
         const dec = new VideoDecoder({
@@ -322,14 +312,11 @@ async function tryVideoDecoder(
  * Try to get an AudioDecoder instance for this stream.
  */
 async function tryAudioDecoder(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+    la: LibAVT.LibAV,
     streamIndex: number,
     stream: LibAVT.CodecParameters, decodeQueue: ifs.StreamFrame[],
     decodeErr: (x: any) => void
 ) {
-    if (!lawc)
-        return null;
-
     try {
         const config = await lawc.audioStreamToConfig(la, stream);
         const dec = new AudioDecoder({

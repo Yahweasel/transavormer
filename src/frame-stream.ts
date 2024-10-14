@@ -15,7 +15,7 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridge from "libavjs-webcodecs-bridge";
+import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as ifs from "./interfaces";
@@ -28,7 +28,6 @@ declare let AudioDecoder: typeof wcp.AudioDecoder;
 export class UserFrameStream implements ifs.FrameStream {
     constructor(
         la: LibAVT.LibAV,
-        lawc: typeof LibAVWebCodecsBridge,
         init: ifs.InitUserFrameStream
     ) {
         const streams: Promise<ifs.StreamParameters>[] = [];

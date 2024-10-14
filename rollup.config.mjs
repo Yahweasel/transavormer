@@ -13,7 +13,18 @@ export default {
             format: "umd",
             name: "TransAVormer",
             plugins: [terser()]
+        }, {
+            file: "dist/transavormer.mjs",
+            format: "es"
+        }, {
+            file: "dist/transavormer.min.mjs",
+            format: "es",
+            plugins: [terser()]
         }
     ],
-    plugins: [typescript()]
+    plugins: [typescript({
+        compilerOptions: {
+            module: "esnext"
+        }
+    })]
 };

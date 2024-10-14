@@ -15,7 +15,6 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridge from "libavjs-webcodecs-bridge";
 
 import * as ifs from "./interfaces";
 import * as norm from "./normalizer";
@@ -30,12 +29,6 @@ export class LAFilter implements ifs.LibAVFrameStream {
          * libav.js instance.
          */
         private _libav: LibAVT.LibAV,
-
-        /**
-         * @private
-         * Bridge instance.
-         */
-        private _lawc: typeof LibAVWebCodecsBridge | undefined,
 
         /**
          * @private
@@ -60,14 +53,13 @@ export class LAFilter implements ifs.LibAVFrameStream {
      */
     private async _initialize() {
         const la = this._libav;
-        const lawc = this._lawc;
         const rawInput = await this._rawInputP;
 
         let input: ifs.LibAVFrameStreamAny;
         if (rawInput.streamType !== "libav-frame") {
             // Need to convert the frames to libav first
             input = await norm.FrameNormalizer.build(
-                la, lawc, {
+                la, {
                     type: "frame-normalizer",
                     ptr: true,
                     input: rawInput
@@ -170,11 +162,11 @@ export class LAFilter implements ifs.LibAVFrameStream {
     }
 
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitLAFilter, input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStream>
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitLAFilterPtr, input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStreamPtr>;
 
@@ -182,12 +174,12 @@ export class LAFilter implements ifs.LibAVFrameStream {
      * Build a encoder.
      */
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitLAFilter | ifs.InitLAFilterPtr,
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.LibAVFrameStreamAny> {
         const ret = new LAFilter(
-            libav, lawc, <ifs.InitLAFilter> init, input
+            libav, <ifs.InitLAFilter> init, input
         );
         await ret._initialize();
         return <any> ret;

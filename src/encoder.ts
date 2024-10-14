@@ -15,7 +15,7 @@
  */
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
-import type * as LibAVWebCodecsBridge from "libavjs-webcodecs-bridge";
+import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as ifs from "./interfaces";
@@ -35,12 +35,6 @@ export class Encoder implements ifs.PacketStream {
          * libav.js instance.
          */
         private _libav: LibAVT.LibAV,
-
-        /**
-         * @private
-         * libavjs-webcodecs-bridge instance.
-         */
-        private _lawc: typeof LibAVWebCodecsBridge | undefined,
 
         /**
          * @private
@@ -65,7 +59,6 @@ export class Encoder implements ifs.PacketStream {
      */
     private async _initialize() {
         const la = this._libav;
-        const lawc = this._lawc;
         const input = await this._inputP;
         const inputStreams = await input.streams;
         const frameStream = input.stream.getReader();
@@ -99,7 +92,7 @@ export class Encoder implements ifs.PacketStream {
             // Try WebCodecs first
             if (inputStream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
                 const wce = await tryVideoEncoder(
-                    la, lawc, this._init.videoConfig, streamIndex, inputStream,
+                    la, this._init.videoConfig, streamIndex, inputStream,
                     encodeQueue, setEncodeErr
                 );
                 if (wce) {
@@ -111,7 +104,7 @@ export class Encoder implements ifs.PacketStream {
 
             } else if (inputStream.codec_type === la.AVMEDIA_TYPE_AUDIO) {
                 const wce = await tryAudioEncoder(
-                    la, lawc, this._init.audioConfig, streamIndex, inputStream,
+                    la, this._init.audioConfig, streamIndex, inputStream,
                     encodeQueue, setEncodeErr
                 );
                 if (wce) {
@@ -303,7 +296,7 @@ export class Encoder implements ifs.PacketStream {
                         if ((<LibAVEncoder> enc).length) {
                             // libav.js encoder
                             const [, c, frame, pkt] = <LibAVEncoder> enc;
-                            await libavifyFrames(la, lawc, frames);
+                            await libavifyFrames(la, frames);
                             if (!filters[i]) {
                                 filters[i] = await mkFilter(
                                     la, c, await streams[i], <any> frames[0]
@@ -334,7 +327,7 @@ export class Encoder implements ifs.PacketStream {
                         } else {
                             // WebCodecs encoder
                             const wce = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
-                            await webcodecsifyFrames(la, lawc, frames);
+                            await webcodecsifyFrames(la, frames);
                             for (const frame of <any[]> frames) {
                                 wce.encode(frame);
                                 while (wce.encodeQueueSize > 3)
@@ -348,11 +341,11 @@ export class Encoder implements ifs.PacketStream {
     }
 
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitEncoder, input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.PacketStream>;
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitEncoderPtr, input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.PacketStreamPtr>;
 
@@ -360,12 +353,12 @@ export class Encoder implements ifs.PacketStream {
      * Build a encoder.
      */
     static async build(
-        libav: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+        libav: LibAVT.LibAV,
         init: ifs.InitEncoder | ifs.InitEncoderPtr,
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.PacketStreamAny> {
         const ret = new Encoder(
-            libav, lawc, <ifs.InitEncoder> init, input
+            libav, <ifs.InitEncoder> init, input
         );
         await ret._initialize();
         return <any> ret;
@@ -391,13 +384,13 @@ export class Encoder implements ifs.PacketStream {
  * Try to get a VideoEncoder instance for this stream.
  */
 async function tryVideoEncoder(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+    la: LibAVT.LibAV,
     configAny: any, streamIndex: number,
     inStream: LibAVT.CodecParameters, encodeQueue: LibAVT.Packet[],
     encodeErr: (x: any) => void
 ): Promise<[Promise<ifs.StreamParameters>, wcp.VideoEncoder]> {
     if (
-        !lawc || !configAny || !configAny.codec
+        !configAny || !configAny.codec
     ) {
         return null;
     }
@@ -452,12 +445,12 @@ async function tryVideoEncoder(
  * Try to get a AudioEncoder instance for this stream.
  */
 async function tryAudioEncoder(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge | undefined,
+    la: LibAVT.LibAV,
     configAny: any, streamIndex: number,
     inStream: LibAVT.CodecParameters, encodeQueue: LibAVT.Packet[],
     encodeErr: (x: any) => void
 ): Promise<[Promise<ifs.StreamParameters>, wcp.AudioEncoder]> {
-    if (!lawc || !configAny || !configAny.codec)
+    if (!configAny || !configAny.codec)
         return null;
 
     try {
@@ -508,7 +501,7 @@ async function tryAudioEncoder(
  * Convert these frames to all be in libav format.
  */
 async function libavifyFrames(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge,
+    la: LibAVT.LibAV,
     frames: (
         number | LibAVT.Frame | wcp.VideoFrame | VideoFrame | wcp.AudioData
     )[]
@@ -528,7 +521,7 @@ async function libavifyFrames(
  * Convert these frames to all be in WebCodecs format.
  */
 async function webcodecsifyFrames(
-    la: LibAVT.LibAV, lawc: typeof LibAVWebCodecsBridge,
+    la: LibAVT.LibAV,
     frames: (
         number | LibAVT.Frame | wcp.VideoFrame | VideoFrame | wcp.AudioData
     )[]
