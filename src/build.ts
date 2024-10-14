@@ -117,7 +117,7 @@ function buildDecoder(
 
     init.ptr = ptr;
     return decoder.Decoder.build(
-        libav, init, buildDemuxer(libav, init.input, true)
+        libav, init, buildPacketStream(libav, init.input, true)
     );
 }
 
@@ -176,10 +176,14 @@ function buildFrameStream(
     )
         return Promise.resolve(init);
 
-    if (init.type === "filter") {
-        throw new Error("lolwhoops no filters yet");
+    if (init.type === "la-filter") {
+        return buildLAFilter(libav, init, ptr || !!init.ptr);
     } else if (init.type === "frame-normalizer") {
         return buildNormalizer(libav, init, ptr || !!init.ptr);
+    } else if (init.type === "frame-stream") {
+        return <any> buildUserFrameStream(libav, init);
+    } else if (init.type === "mono-frame-stream") {
+        return <any> buildUserMonoFrameStream(libav, init);
     } else {
         return buildDecoder(libav, init, ptr || !!init.ptr);
     }
@@ -228,6 +232,8 @@ function buildPacketStream(
         init.type === "frame-normalizer" ||
         init.type === "encoder") {
         return buildEncoder(libav, init, ptr || !!init.ptr);
+    } else if (init.type === "packet-stream") {
+        return <any> buildUserPacketStream(init);
     } else {
         return buildDemuxer(libav, init, ptr || !!init.ptr);
     }
