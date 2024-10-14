@@ -26,7 +26,6 @@
 const fs = require("fs/promises");
 
 const LibAV = require("@libav.js/variant-webcodecs");
-const wcb = require("libavjs-webcodecs-bridge");
 const tav = require("../dist/transavormer.js");
 
 async function main() {
@@ -41,7 +40,7 @@ async function main() {
         }
     });
     fh.readableWebStream().pipeThrough(trans);
-    const out = await tav.build(la, wcb, {
+    const out = await tav.build(la, {
         type: "muxer",
         format: "matroska",
         input: trans.readable
