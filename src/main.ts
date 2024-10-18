@@ -46,6 +46,7 @@ export type InitFrameNormalizer = ifs.InitFrameNormalizer;
 export type InitFrameNormalizerPtr = ifs.InitFrameNormalizerPtr;
 export type InitLAFilter = ifs.InitLAFilter;
 export type InitLAFilterPtr = ifs.InitLAFilterPtr;
+export type EncoderAVCodecConfig = ifs.EncoderAVCodecConfig;
 export type InitEncoder = ifs.InitEncoder;
 export type InitEncoderPtr = ifs.InitEncoderPtr;
 export type InitMuxer = ifs.InitMuxer;

@@ -230,6 +230,14 @@ export interface InitLAFilterPtr {
 }
 
 /**
+ * Type used for codec context properties for encoders.
+ */
+export type EncoderAVCodecConfig = LibAVT.CodecParameters &
+    LibAVT.AVCodecContextProps & {
+        options?: Record<string, string>
+    };
+
+/**
  * Initializer for an encoder.
  */
 export interface InitEncoder {
@@ -237,9 +245,9 @@ export interface InitEncoder {
     ptr?: false;
     input: InitFrameStream;
     videoConfig?: wcp.VideoEncoderConfig;
-    libavVideoConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
+    libavVideoConfig?: EncoderAVCodecConfig | number;
     audioConfig?: wcp.AudioEncoderConfig;
-    libavAudioConfig?: (LibAVT.CodecParameters & LibAVT.AVCodecContextProps) | number;
+    libavAudioConfig?: EncoderAVCodecConfig | number;
 }
 
 /**

@@ -122,7 +122,7 @@ export class Encoder implements ifs.PacketStream {
             }
 
             // Perhaps convert the config
-            let codecpar: LibAVT.CodecParameters & LibAVT.AVCodecContextProps;
+            let codecpar: ifs.EncoderAVCodecConfig;
             if (inputStream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
                 if (this._init.libavVideoConfig) {
                     codecpar = <any> this._init.libavVideoConfig;
@@ -131,6 +131,11 @@ export class Encoder implements ifs.PacketStream {
                     const str = await lawc.configToVideoStream(la, config);
                     codecpar = await la.ff_copyout_codecpar(str[0]);
                     await la.avcodec_parameters_free_js(str[0]);
+                    if (config.bitrate) {
+                        const br = la.f64toi64(config.bitrate);
+                        codecpar.bit_rate = br[0];
+                        codecpar.bit_ratehi = br[1];
+                    }
                 } else
                     throw new Error("Video stream with no video configuration");
             } else {
@@ -141,6 +146,11 @@ export class Encoder implements ifs.PacketStream {
                     const str = await lawc.configToAudioStream(la, config);
                     codecpar = await la.ff_copyout_codecpar(str[0]);
                     await la.avcodec_parameters_free_js(str[0]);
+                    if (config.bitrate) {
+                        const br = la.f64toi64(config.bitrate);
+                        codecpar.bit_rate = br[0];
+                        codecpar.bit_ratehi = br[1];
+                    }
                 } else
                     throw new Error("Audio stream with no audio configuration");
             }
@@ -151,10 +161,13 @@ export class Encoder implements ifs.PacketStream {
 
             // Convert to codec context
             const ctx: LibAVT.AVCodecContextProps = {};
+            let options: Record<string, string> = Object.create(null);
             for (const key in codecpar) {
                 if (la[`AVCodecContext_${key}_s`])
                     ctx[key] = codecpar[key];
             }
+            if (codecpar.options)
+                options = codecpar.options;
             if (inputStream.codec_type === la.AVMEDIA_TYPE_VIDEO) {
                 if (!("pix_fmt" in ctx))
                     ctx.pix_fmt = la.AV_PIX_FMT_YUV420P; // FIXME
@@ -179,7 +192,7 @@ export class Encoder implements ifs.PacketStream {
             const lae = await la.ff_init_encoder(
                 await la.AVCodec_name(laei),
                 {
-                    ctx,
+                    ctx, options,
                     time_base: [1, 1000000]
                 }
             );
