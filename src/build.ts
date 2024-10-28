@@ -20,6 +20,7 @@ import type * as wcp from "libavjs-webcodecs-polyfill";
 import * as demuxer from "./demuxer";
 import * as packetSel from "./packet-selector";
 import * as decoder from "./decoder";
+import * as frameSel from "./frame-selector";
 import * as norm from "./normalizer";
 import * as filter from "./filter";
 import * as encoder from "./encoder";
@@ -32,6 +33,7 @@ export function build(libav: LibAVT.LibAV, init: ifs.InitDemuxerPtr): Promise<if
 export function build(libav: LibAVT.LibAV, init: ifs.InitPacketSelector): Promise<ifs.PacketStreamAny>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitDecoder): Promise<ifs.FrameStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitDecoderPtr): Promise<ifs.FrameStreamPtr>;
+export function build(libav: LibAVT.LibAV, init: ifs.InitFrameSelector): Promise<ifs.FrameStreamAny>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameNormalizer): Promise<ifs.LibAVFrameStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameNormalizerPtr): Promise<ifs.LibAVFrameStreamPtr>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitEncoder): Promise<ifs.PacketStream>;
@@ -55,6 +57,9 @@ export function build(libav: LibAVT.LibAV, init: any): Promise<any> {
 
         case "decoder":
             return buildDecoder(libav, init, !!init.ptr);
+
+        case "frame-selector":
+            return buildFrameSelector(libav, init);
 
         case "frame-normalizer":
             return buildNormalizer(libav, init, !!init.ptr);
@@ -135,6 +140,18 @@ function buildDecoder(
     init.ptr = ptr;
     return decoder.Decoder.build(
         libav, init, buildPacketStream(libav, init.input, true)
+    );
+}
+
+function buildFrameSelector(
+    libav: LibAVT.LibAV, init: any
+): Promise<ifs.FrameStreamAny> {
+    if (init.then)
+        return init;
+    if (init.streamType === "packet")
+        return Promise.resolve(init);
+    return frameSel.FrameSelector.build(
+        libav, init, buildFrameStream(libav, init.input, true)
     );
 }
 
