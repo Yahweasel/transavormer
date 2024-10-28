@@ -43,7 +43,7 @@ export function mkMapping(
                 type: (sel0 === "v") ? "video" :
                       (sel0 === "a") ? "audio" :
                       "all",
-                selection: (sel1.length) ? +sel1 : 0
+                selection: (sel1.length) ? +sel1 : "all"
             });
         } else {
             selection.push(sel);
