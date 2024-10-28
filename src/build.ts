@@ -18,6 +18,7 @@ import type * as LibAVT from "@libav.js/variant-webcodecs";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as demuxer from "./demuxer";
+import * as packetSel from "./packet-selector";
 import * as decoder from "./decoder";
 import * as norm from "./normalizer";
 import * as filter from "./filter";
@@ -28,6 +29,7 @@ import * as ifs from "./interfaces";
 
 export function build(libav: LibAVT.LibAV, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitDemuxerPtr): Promise<ifs.PacketStreamPtr>;
+export function build(libav: LibAVT.LibAV, init: ifs.InitPacketSelector): Promise<ifs.PacketStreamAny>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitDecoder): Promise<ifs.FrameStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitDecoderPtr): Promise<ifs.FrameStreamPtr>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameNormalizer): Promise<ifs.LibAVFrameStream>;
@@ -47,6 +49,9 @@ export function build(libav: LibAVT.LibAV, init: any): Promise<any> {
     switch (init.type) {
         case "demuxer":
             return buildDemuxer(libav, init, !!init.ptr);
+
+        case "packet-selector":
+            return buildPacketSelector(libav, init);
 
         case "decoder":
             return buildDecoder(libav, init, !!init.ptr);
@@ -93,6 +98,18 @@ function buildDemuxer(
 
     init.ptr = ptr;
     return demuxer.Demuxer.build(libav, init);
+}
+
+function buildPacketSelector(
+    libav: LibAVT.LibAV, init: any
+): Promise<ifs.PacketStreamAny> {
+    if (init.then)
+        return init;
+    if (init.streamType === "packet")
+        return Promise.resolve(init);
+    return packetSel.PacketSelector.build(
+        libav, init, buildPacketStream(libav, init.input, true)
+    );
 }
 
 function buildDecoder(

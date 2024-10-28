@@ -155,6 +155,25 @@ export interface InitDemuxerPtr {
     input: InputFile;
 }
 
+export interface SelectionFull {
+    type?: "video" | "audio" | "all";
+    selection?: number | "all" | "none";
+}
+
+/**
+ * Selector descriptions for packet selectors.
+ */
+export type Selection = string | number | SelectionFull;
+
+/**
+ * Initializer for a packet stream selector.
+ */
+export interface InitPacketSelector {
+    type: "packet-selector";
+    selection: Selection | Selection[];
+    input: InitPacketStream;
+}
+
 /**
  * Initializer for a decoder.
  */
@@ -171,6 +190,15 @@ export interface InitDecoderPtr {
     type: "decoder";
     ptr: true;
     input: InitPacketStream;
+}
+
+/**
+ * Initializer for a frame-level stream selector.
+ */
+export interface InitFrameSelector {
+    type: "frame-selector";
+    selection: Selection | Selection[];
+    input: InitFrameStream;
 }
 
 /**
@@ -307,12 +335,15 @@ export interface InitUserMonoFrameStream {
 export type InitPacketStream =
     InputFile |
     InitDemuxer | InitDemuxerPtr |
+    InitPacketSelector |
     InitEncoder | InitEncoderPtr |
     InitUserPacketStream |
     PacketStreamAny | Promise<PacketStreamAny>;
 
 export type InitFrameStream =
     InitPacketStream |
+    InitDecoder | InitDecoderPtr |
+    InitFrameSelector |
     InitFrameNormalizer | InitFrameNormalizerPtr |
     InitUserFrameStream | InitUserMonoFrameStream |
     FrameStreamAny | Promise<FrameStreamAny>;
