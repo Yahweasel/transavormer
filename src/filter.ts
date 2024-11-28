@@ -238,9 +238,14 @@ async function mkFilter(
             }, oios
         );
     } else {
+        let channelLayout = 4;
+        if (frame.channel_layout)
+            channelLayout = frame.channel_layout;
+        else if (frame.channels && frame.channels !== 1)
+            channelLayout = (1 << frame.channels) - 1;
         const oios: LibAVT.FilterIOSettings = {
             sample_rate: frame.sample_rate,
-            channel_layout: frame.channel_layout,
+            channel_layout: channelLayout,
             sample_fmt: frame.format,
             time_base: [1, frame.sample_rate!]
         };
@@ -249,7 +254,7 @@ async function mkFilter(
             descr,
             {
                 sample_rate: frame.sample_rate,
-                channel_layout: frame.channel_layout,
+                channel_layout: channelLayout,
                 sample_fmt: frame.format,
                 time_base: frame.time_base_num
                     ? [frame.time_base_num, frame.time_base_den]

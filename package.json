@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@libav.js/variant-webcodecs": "^6.4.7",
+    "@libav.js/variant-webcodecs-avf": "^6.4.7",
     "@libav.js/variant-webm-vp9": "^6.4.7",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^15.3.0",
