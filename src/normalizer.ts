@@ -104,15 +104,15 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
                 for (const streamFrame of rd.value) {
                     const frame = streamFrame.frame;
                     if ((<wcp.VideoFrame> frame).codedWidth) {
-                        const laFrame = await lawc.videoFrameToLAFrame(
-                            <wcp.VideoFrame> frame
-                        );
+                        const vf = <wcp.VideoFrame> frame;
+                        const laFrame = await lawc.videoFrameToLAFrame(vf);
+                        vf.close();
                         await pushFrame(streamFrame.streamIndex, laFrame);
 
                     } else if ((<wcp.AudioData> frame).sampleRate) {
-                        const laFrame = await lawc.audioDataToLAFrame(
-                            <wcp.AudioData> frame
-                        );
+                        const af = <wcp.AudioData> frame;
+                        const laFrame = await lawc.audioDataToLAFrame(af);
+                        af.close();
                         await pushFrame(streamFrame.streamIndex, laFrame);
 
                     } else {

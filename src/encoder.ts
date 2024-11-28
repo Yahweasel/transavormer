@@ -343,6 +343,7 @@ export class Encoder implements ifs.PacketStream {
                             await webcodecsifyFrames(la, frames);
                             for (const frame of <any[]> frames) {
                                 wce.encode(frame);
+                                frame.close();
                                 while (wce.encodeQueueSize > 3)
                                     await new Promise(res => wce.ondequeue = res);
                             }
@@ -522,9 +523,13 @@ async function libavifyFrames(
     for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
         if ((<wcp.VideoFrame> frame).codedWidth) {
-            frame[i] = await lawc.videoFrameToLAFrame(<wcp.VideoFrame> frame);
+            const vf = <wcp.VideoFrame> frame;
+            frame[i] = await lawc.videoFrameToLAFrame(vf);
+            vf.close();
         } else if ((<wcp.AudioData> frame).numberOfFrames) {
-            frame[i] = await lawc.audioDataToLAFrame(<wcp.AudioData> frame);
+            const af = <wcp.AudioData> frame;
+            frame[i] = await lawc.audioDataToLAFrame(af);
+            af.close();
         }
     }
 }
