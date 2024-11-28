@@ -64,9 +64,9 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
 
                 const outFrames: ifs.LibAVStreamFrame[] = [];
 
-                async function pushFrame(
+                const pushFrame = async (
                     streamIndex: number, frame: LibAVT.Frame | number
-                ) {
+                ) => {
                     if (typeof frame === "number") {
                         // Already a libav pointer
                         if (!this.ptr) {
@@ -99,7 +99,7 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
                         }
 
                     }
-                }
+                };
 
                 for (const streamFrame of rd.value) {
                     const frame = streamFrame.frame;
