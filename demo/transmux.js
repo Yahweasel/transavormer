@@ -25,7 +25,7 @@
 
 const fs = require("fs/promises");
 
-const LibAV = require("@libav.js/variant-webcodecs");
+const LibAV = require("@libav.js/variant-webcodecs-avf");
 const tav = require("../dist/transavormer.js");
 
 async function main() {
