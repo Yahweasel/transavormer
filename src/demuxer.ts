@@ -16,6 +16,7 @@
 
 import type * as LibAVT from "@libav.js/variant-webcodecs";
 
+import * as cmdsM from "./commands";
 import * as ifs from "./interfaces";
 
 /**
@@ -119,6 +120,7 @@ export class Demuxer implements ifs.PacketStream {
 
         // Open the file
         const [fmtCtx, streams] = await la.ff_init_demuxer_file(filename);
+        this._fmtCtx = fmtCtx;
 
         // Get the codec info
         const spars: ifs.StreamParameters[] = [];
@@ -147,6 +149,12 @@ export class Demuxer implements ifs.PacketStream {
                         }
                     );
 
+                    // If we seeked, tell the next step
+                    if (this._seeked) {
+                        controller.enqueue([]);
+                        this._seeked = false;
+                    }
+
                     // Pass it thru
                     let hadPackets = false;
                     if (packets[0] && packets[0].length) {
@@ -170,6 +178,60 @@ export class Demuxer implements ifs.PacketStream {
         });
     }
 
+    async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const cmdsR = cmdsM.addResults(cmds);
+
+        for (const cmd of cmdsR) {
+            if (cmd.c === "seek") {
+                const seek = <ifs.SeekCommandResult> cmd;
+
+                let time = seek.time;
+                let min = seek.min || 0;
+                let max = (typeof seek.max === "number") ? seek.max : time;
+
+                // Convert times
+                if (!seek.streamTimebase) {
+                    let timeBase = [1, 1000000]; // Default is microseconds
+                    if (typeof seek.stream === "number") {
+                        const streams = await this.streams;
+                        timeBase = [
+                            streams[seek.stream].time_base_num || 1,
+                            streams[seek.stream].time_base_den || 1000000
+                        ];
+                    }
+
+                    time = Math.round(time * timeBase[1] / timeBase[0]);
+                    min = Math.round(min * timeBase[1] / timeBase[0]);
+                    max = Math.round(max * timeBase[1] / timeBase[0]);
+                }
+
+                const time32 = this._libav.f64toi64(time);
+                const min32 = this._libav.f64toi64(min);
+                const max32 = this._libav.f64toi64(max);
+
+                const res = await this._libav.avformat_seek_file(
+                    this._fmtCtx,
+                    (typeof seek.stream === "number") ? seek.stream : -1,
+                    min32[0], min32[1],
+                    time32[0], time32[1],
+                    max32[0], max32[1],
+                    this._libav.AVSEEK_FLAG_BACKWARD
+                );
+                this._seeked = true;
+
+                seek.ran = true;
+                if (res >= 0) {
+                    seek.success = seek.success && true;
+                } else {
+                    seek.success = false;
+                    seek.diagnostic.push(await this._libav.ff_error(res));
+                }
+            }
+        }
+
+        return cmdsR;
+    }
+
     static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
     static async build(libav: LibAVT.LibAV, init: ifs.InitDemuxerPtr): Promise<ifs.PacketStreamPtr>;
 
@@ -190,6 +252,18 @@ export class Demuxer implements ifs.PacketStream {
     component: ifs.Component = "demuxer";
     streamType: "packet" = "packet";
     ptr: false;
+
+    /**
+     * @private
+     * Set when we've seeked to know to indicate that to the next step.
+     */
+    _seeked = false;
+
+    /**
+     * @private
+     * The libav format context.
+     */
+    _fmtCtx = 0;
 
     /**
      * Stream of packets.

@@ -26,6 +26,8 @@ import * as filter from "./filter";
 import * as encoder from "./encoder";
 import * as muxer from "./muxer";
 import * as frameStream from "./frame-stream";
+
+import * as cmdsM from "./commands";
 import * as ifs from "./interfaces";
 
 export function build(libav: LibAVT.LibAV, init: ifs.InitDemuxer): Promise<ifs.PacketStream>;
@@ -304,7 +306,10 @@ export function buildUserPacketStream(
         ptr: false,
         streams: Promise.resolve(init.streams),
         streamType: "packet",
-        stream: <any> init.input
+        stream: <any> init.input,
+        sendCommands(cmds) {
+            return Promise.resolve(cmdsM.addResults(cmds));
+        }
     });
 }
 

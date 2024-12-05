@@ -161,6 +161,11 @@ export class LAFilter implements ifs.LibAVFrameStream {
         });
     }
 
+    async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const input = await this._rawInputP;
+        return input.sendCommands(cmds);
+    }
+
     static async build(
         libav: LibAVT.LibAV,
         init: ifs.InitLAFilter, input: Promise<ifs.FrameStreamAny>

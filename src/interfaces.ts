@@ -88,10 +88,19 @@ export type Component =
     "file-stream" | "muxer";
 
 /**
+ * Every transformer sets at least `component` and `streamType`, and allows
+ * commands.
+ */
+export interface Transformer {
+    component: Component;
+    streamType: string;
+    sendCommands(cmds: Command[]): Promise<CommandResult[]>;
+}
+
+/**
  * Supertype of every streaming type.
  */
-export interface WithStreams<StreamType, StreamElem> {
-    component: Component;
+export interface WithStreams<StreamType extends string, StreamElem> extends Transformer {
     streamType: StreamType;
     streams: Promise<StreamParameters[]>;
     stream: ReadableStream<StreamElem[]>;
@@ -100,7 +109,7 @@ export interface WithStreams<StreamType, StreamElem> {
 /**
  * Supertype of streaming types that have pointer and non-pointer versions.
  */
-export interface WithStreamsPtr<StreamType, StreamElem, Ptr>
+export interface WithStreamsPtr<StreamType extends string, StreamElem, Ptr>
     extends WithStreams<StreamType, StreamElem> {
     ptr: Ptr;
 }
@@ -130,8 +139,7 @@ export type FrameStreamPtr = WithStreamsPtr<
 >;
 export type FrameStreamAny = FrameStream | FrameStreamPtr;
 
-export interface FileStream {
-    component: Component;
+export interface FileStream extends Transformer {
     streamType: "file";
     stream: ReadableStream<{position: number, data: Uint8Array}>;
 }
@@ -361,3 +369,73 @@ export type Init =
     InitMuxer |
     InitUserPacketStream |
     InitUserFrameStream | InitUserMonoFrameStream;
+
+
+/**
+ * TransAVormer commands have a generic form so that you can write custom
+ * commands.
+ */
+export interface Command {
+    /**
+     * The name of the command.
+     */
+    c: string;
+}
+
+/**
+ * When you finish a command, the result is added to the command object.
+ */
+export interface CommandResult extends Command {
+    /**
+     * True if the command actually ran (one or more transformers interpreted it).
+     */
+    ran: boolean;
+
+    /**
+     * True if the command succeeded.
+     */
+    success: boolean;
+
+    /**
+     * Diagnostic information on the result.
+     */
+    diagnostic: any[];
+}
+
+/**
+ * A seek command. Seeks to the specified time.
+ */
+export interface SeekCommand extends Command {
+    c: "seek";
+
+    /**
+     * Time to seek to. By default in seconds, but can be in stream time units
+     * (see below).
+     */
+    time: number;
+
+    /**
+     * Minimum time to seek to. If unset, 0.
+     */
+    min?: number;
+
+    /**
+     * Maximum time to seek to. If unset, same as time.
+     */
+    max?: number;
+
+    /**
+     * Stream to base seeking on. By default, let the demuxer decide.
+     */
+    stream?: number;
+
+    /**
+     * Set to use the stream timebase instead of seconds.
+     */
+    streamTimebase?: boolean;
+}
+
+/**
+ * A seek command result.
+ */
+export type SeekCommandResult = SeekCommand & CommandResult;

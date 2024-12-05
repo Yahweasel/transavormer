@@ -126,6 +126,11 @@ export class FrameNormalizer implements ifs.LibAVFrameStream {
         });
     }
 
+    async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const input = await this._inputP;
+        return input.sendCommands(cmds);
+    }
+
     static async build(
         libav: LibAVT.LibAV,
         init: ifs.InitFrameNormalizer,

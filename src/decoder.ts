@@ -24,6 +24,7 @@ declare let AudioDecoder: typeof wcp.AudioDecoder;
 
 type Frame = LibAVT.Frame | wcp.VideoFrame | wcp.AudioData;
 type LibAVDecoder = [number, number, number, number];
+type AnyDecoder = LibAVDecoder | wcp.VideoDecoder | wcp.AudioDecoder;
 
 /**
  * A multi-decoder, consisting of decoders for any number of streams.
@@ -73,9 +74,7 @@ export class Decoder implements ifs.FrameStream {
         function setDecodeErr(x: any) { decodeErr = x; }
 
         // Decoders, per stream
-        const decoders: (
-            LibAVDecoder | wcp.VideoDecoder | wcp.AudioDecoder | null
-        )[] = [];
+        const decoders: (AnyDecoder | null)[] = [];
 
         // Get decoders for each stream
         for (let streamIndex = 0; streamIndex < streams.length; streamIndex++) {
@@ -173,6 +172,26 @@ export class Decoder implements ifs.FrameStream {
                         continue;
                     }
 
+                    /* Sending an empty array indicates seeking, so flush
+                     * decoders */
+                    if (inPackets.value.length === 0) {
+                        for (const dec of decoders) {
+                            if (!dec)
+                                continue;
+                            if ((<LibAVDecoder> dec).length) {
+                                // LibAV decoder
+                                const [, c] = <LibAVDecoder> dec;
+                                await (<any> this._libav).avcodec_flush_buffers(c);
+
+                            } else {
+                                // WebCodecs decoder
+                                const wcd = <wcp.VideoDecoder | wcp.AudioDecoder> dec;
+                                await wcd.flush();
+
+                            }
+                        }
+                    }
+
                     // Group packets by stream
                     const laPackets: Record<number, (number | LibAVT.Packet)[]> = {};
                     for (const packet of inPackets.value) {
@@ -240,6 +259,11 @@ export class Decoder implements ifs.FrameStream {
                 }
             }
         });
+    }
+
+    async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const input = await this._inputP;
+        return input.sendCommands(cmds);
     }
 
     static async build(

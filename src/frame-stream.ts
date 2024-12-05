@@ -18,6 +18,7 @@ import type * as LibAVT from "@libav.js/variant-webcodecs";
 import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
+import * as cmdsM from "./commands";
 import * as ifs from "./interfaces";
 
 declare let AudioDecoder: typeof wcp.AudioDecoder;
@@ -90,6 +91,10 @@ export class UserFrameStream implements ifs.FrameStream {
                 controller.enqueue(rd.value!);
             }
         });
+    }
+
+    sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        return Promise.resolve(cmdsM.addResults(cmds));
     }
 
     component: ifs.Component = "frame-stream";

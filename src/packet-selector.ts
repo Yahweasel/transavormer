@@ -106,6 +106,11 @@ export class PacketSelector implements ifs.PacketStream {
         });
     }
 
+    async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const input = await this._inputP;
+        return input.sendCommands(cmds);
+    }
+
     /**
      * Build a packet selector.
      */
