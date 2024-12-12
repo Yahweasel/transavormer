@@ -22,6 +22,7 @@ import * as packetSel from "./packet-selector";
 import * as decoder from "./decoder";
 import * as frameSel from "./frame-selector";
 import * as norm from "./normalizer";
+import * as pNorm from "./play-normalizer";
 import * as filter from "./filter";
 import * as encoder from "./encoder";
 import * as muxer from "./muxer";
@@ -38,6 +39,7 @@ export function build(libav: LibAVT.LibAV, init: ifs.InitDecoderPtr): Promise<if
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameSelector): Promise<ifs.FrameStreamAny>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameNormalizer): Promise<ifs.LibAVFrameStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitFrameNormalizerPtr): Promise<ifs.LibAVFrameStreamPtr>;
+export function build(libav: LibAVT.LibAV, init: ifs.InitPlaybackNormalizer): Promise<ifs.FrameStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitEncoder): Promise<ifs.PacketStream>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitEncoderPtr): Promise<ifs.PacketStreamPtr>;
 export function build(libav: LibAVT.LibAV, init: ifs.InitMuxer): Promise<ifs.FileStream>;
@@ -65,6 +67,9 @@ export function build(libav: LibAVT.LibAV, init: any): Promise<any> {
 
         case "frame-normalizer":
             return buildNormalizer(libav, init, !!init.ptr);
+
+        case "play-normalizer":
+            return buildPlayNormalizer(libav, init);
 
         case "la-filter":
             return buildLAFilter(libav, init, !!init.ptr);
@@ -179,6 +184,19 @@ function buildNormalizer(
     );
 }
 
+function buildPlayNormalizer(
+    libav: LibAVT.LibAV,
+    init: any
+): Promise<ifs.FrameStream> {
+    if (init.then)
+        return init;
+    if (init.streamType === "frame")
+        return Promise.resolve(init);
+
+    return pNorm.PlaybackNormalizer.build(
+        libav, init, buildDecoder(libav, init.input, true)
+    );
+}
 function buildLAFilter(
     libav: LibAVT.LibAV,
     init: any, ptr: boolean

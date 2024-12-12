@@ -83,7 +83,7 @@ export type Component =
     "packet-selector" |
     "frame-stream" | "decoder" |
     "frame-selector" |
-    "frame-normalizer" | "la-filter" |
+    "frame-normalizer" | "play-normalizer" | "la-filter" |
     "encoder" |
     "file-stream" | "muxer";
 
@@ -228,6 +228,15 @@ export interface InitFrameNormalizerPtr {
 }
 
 /**
+ * Initializer for a playback normalizer.
+ */
+export interface InitPlaybackNormalizer {
+    type: "play-normalizer";
+    sampleRate: number;
+    input: InitFrameStream;
+}
+
+/**
  * Initializer for a libav.js filter.
  */
 export interface InitLAFilter {
@@ -353,6 +362,7 @@ export type InitFrameStream =
     InitDecoder | InitDecoderPtr |
     InitFrameSelector |
     InitFrameNormalizer | InitFrameNormalizerPtr |
+    InitPlaybackNormalizer |
     InitUserFrameStream | InitUserMonoFrameStream |
     FrameStreamAny | Promise<FrameStreamAny>;
 
@@ -364,6 +374,7 @@ export type Init =
     InitDemuxer | InitDemuxerPtr |
     InitDecoder | InitDecoderPtr |
     InitFrameNormalizer | InitFrameNormalizerPtr |
+    InitPlaybackNormalizer |
     InitLAFilter | InitLAFilterPtr |
     InitEncoder | InitEncoderPtr |
     InitMuxer |
