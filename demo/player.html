@@ -48,6 +48,11 @@
                     return;
 
                 const ac = new AudioContext();
+                if (ac.state !== "running")
+                    ac.resume();
+                const playback = await Weasound.createAudioPlayback(ac);
+                (playback.unsharedNode() || playback.sharedNode()).connect(ac.destination);
+
                 const ctx = canvas.getContext("2d");
 
                 const la = await LibAV.LibAV();
@@ -56,18 +61,91 @@
                     sampleRate: ac.sampleRate,
                     input: file
                 });
-                const rdr = out.stream.getReader();
-                while (true) {
-                    const rd = await rdr.read();
-                    if (rd.done) break;
-                    for (const sf of rd.value) {
-                        const frame = sf.frame;
-                        if (frame.codedWidth) {
-                            ctx.drawImage(frame, 0, 0);
-                            await new Promise(res => setTimeout(res, 1000/60));
+
+                const streams = out.stream.tee();
+                let videoOffset = null;
+                let audioOffset = null;
+                let videoPromise = Promise.all([]);
+                let videoQueue = 0;
+
+                // Video playback
+                (async function() {
+                    const rdr = streams[0].getReader();
+                    while (true) {
+                        const rd = await rdr.read();
+                        if (rd.done) break;
+                        for (const sf of rd.value) {
+                            const frame = sf.frame;
+                            if (frame.codedWidth || frame.width) {
+                                let image, frameTime;
+                                if (frame.codedWidth) {
+                                    // WebCodecs
+                                    image = frame;
+                                    frameTime = frame.timestamp / 1000;
+                                } else {
+                                    // libav.js
+                                    image = frame.data;
+                                    frameTime = frame.pts
+                                        * frame.time_base_num / frame.time_base_den
+                                        * 1000;
+                                }
+
+                                videoQueue++;
+                                videoPromise = videoPromise.catch(console.error).then(async () => {
+                                    const now = performance.now();
+                                    let targetTime = now;
+                                    if (audioOffset !== null) {
+                                        targetTime = frameTime + audioOffset;
+                                    } else if (videoOffset !== null) {
+                                        targetTime = frameTime + videoOffset;
+                                    } else {
+                                        videoOffset = now - frameTime;
+                                    }
+
+                                    const delay = targetTime - now;
+                                    if (delay > 100 || delay < -100) {
+                                        videoOffset = now - frameTime;
+                                    } else if (delay > 0) {
+                                        await new Promise(res => setTimeout(res, delay));
+                                    }
+                                    canvas.width = frame.codedWidth || frame.width;
+                                    canvas.height = frame.codedHeight || frame.height;
+                                    ctx.drawImage(image, 0, 0);
+                                    image.close();
+                                    videoQueue--;
+                                });
+
+                                while (videoQueue > 3)
+                                    await new Promise(res => setTimeout(res, 10));
+
+                            }
                         }
                     }
-                }
+                })();
+
+                // Audio playback
+                (async function() {
+                    const rdr = streams[1].getReader();
+                    while (true) {
+                        const rd = await rdr.read();
+                        if (rd.done) break;
+                        for (const sf of rd.value) {
+                            const frame = sf.frame;
+                            const now = performance.now();
+                            if (frame.sample_rate) {
+                                const frameTime = frame.pts
+                                    * frame.time_base_num / frame.time_base_den
+                                    * 1000;
+                                const delay = playback.play(frame.data);
+                                audioOffset = performance.now() + delay - frameTime;
+
+                                if (delay > 200)
+                                    await new Promise(res => setTimeout(res, delay - 100));
+
+                            }
+                        }
+                    }
+                })();
             }
         })();
         </script>
