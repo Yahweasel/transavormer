@@ -151,6 +151,7 @@ export class LAFilter implements ifs.LibAVFrameStream {
                     }
 
                     if (eof) {
+                        awaitCleanup();
                         controller.close();
                     }
 
