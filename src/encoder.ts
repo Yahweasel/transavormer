@@ -276,8 +276,8 @@ export class Encoder implements ifs.PacketStream {
                                 }
 
                             } else {
-                                const wcd = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
-                                await wcd.flush();
+                                const wce = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
+                                await wce.flush();
 
                             }
                         }
@@ -529,11 +529,11 @@ async function libavifyFrames(
         const frame = frames[i];
         if ((<wcp.VideoFrame> frame).codedWidth) {
             const vf = <wcp.VideoFrame> frame;
-            frame[i] = await lawc.videoFrameToLAFrame(vf);
+            frames[i] = await lawc.videoFrameToLAFrame(vf);
             vf.close();
         } else if ((<wcp.AudioData> frame).numberOfFrames) {
             const af = <wcp.AudioData> frame;
-            frame[i] = await lawc.audioDataToLAFrame(af);
+            frames[i] = await lawc.audioDataToLAFrame(af);
             af.close();
         }
     }

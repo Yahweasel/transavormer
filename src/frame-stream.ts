@@ -64,7 +64,7 @@ export class UserFrameStream implements ifs.FrameStream {
                         laf = await lawc.audioDataToLAFrame(
                             <wcp.AudioData> frame.frame
                         );
-                    } if (typeof frame.frame === "number") {
+                    } else if (typeof frame.frame === "number") {
                         laf = await la.ff_copyout_frame(frame.frame);
                     } else {
                         laf = <LibAVT.Frame> frame.frame;
