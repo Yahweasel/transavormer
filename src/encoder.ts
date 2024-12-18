@@ -276,8 +276,8 @@ export class Encoder implements ifs.PacketStream {
                                 }
 
                             } else {
-                                const wcd = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
-                                await wcd.flush();
+                                const wce = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
+                                await wce.flush();
 
                             }
                         }
