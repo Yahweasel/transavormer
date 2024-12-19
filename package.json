@@ -25,10 +25,9 @@
   "author": "Yahweasel",
   "license": "ISC",
   "dependencies": {
-    "libavjs-webcodecs-bridge": "^0.3.0"
+    "libavjs-webcodecs-bridge": "^0.3.2"
   },
   "devDependencies": {
-    "@libav.js/variant-webcodecs": "^6.4.7",
     "@libav.js/variant-webcodecs-avf": "^6.4.7",
     "@libav.js/variant-webm-vp9": "^6.4.7",
     "@rollup/plugin-commonjs": "^28.0.0",

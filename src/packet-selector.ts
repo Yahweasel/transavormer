@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-import type * as LibAVT from "@libav.js/variant-webcodecs";
+import type * as LibAVT from "@libav.js/types";
 
 import * as ifs from "./interfaces";
 import * as sel from "./selector";
