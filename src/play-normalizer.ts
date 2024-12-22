@@ -160,8 +160,10 @@ export class PlaybackNormalizer implements ifs.FrameStream {
                     } else { 
                         // Already a libav frame, but might be a pointer
                         let laFrame = <LibAVT.Frame> frame;
-                        if (typeof frame === "number")
+                        if (typeof frame === "number") {
                             laFrame = await la.ff_copyout_frame(frame);
+                            await la.av_frame_unref(frame);
+                        }
 
                         if (laFrame.width) {
                             /* Video frame. Either convert to a VideoFrame (if
@@ -195,9 +197,11 @@ export class PlaybackNormalizer implements ifs.FrameStream {
                                 await la.ff_copyin_frame(this._frame, laFrame);
                                 // FIXME: Check for errors
                                 await la.sws_scale_frame(sws, this._outFrame, this._frame);
+                                await la.av_frame_unref(this._frame);
                                 const id = await la.ff_copyout_frame_video_imagedata(
                                     this._outFrame
                                 );
+                                await la.av_frame_unref(this._outFrame);
                                 laFrame.data = await createImageBitmap(id);
 
                                 outFrames.push({
