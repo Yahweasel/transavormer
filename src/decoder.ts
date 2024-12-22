@@ -317,6 +317,9 @@ async function tryVideoDecoder(
 ) {
     try {
         const config = await lawc.videoStreamToConfig(la, stream);
+        if (config.codec === 'unknown') {
+          return null;
+        }
         const dec = new VideoDecoder({
             output: x => decodeQueue.push({
                 streamIndex: streamIndex,
@@ -343,6 +346,9 @@ async function tryAudioDecoder(
 ) {
     try {
         const config = await lawc.audioStreamToConfig(la, stream);
+        if (config.codec === 'unknown') {
+          return null;
+        }
         const dec = new AudioDecoder({
             output: x => decodeQueue.push({
                 streamIndex: streamIndex,
