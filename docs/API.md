@@ -55,7 +55,8 @@ you create a muxer stream, the returned object has this form:
 {
     component: "muxer",
     streamType: "file",
-    stream: ReadableStream<{position: number, data: Uint8Array}>
+    stream: ReadableStream<{position: number, data: Uint8Array}>,
+    sendCommands: (cmds: Command[]) => Promise<CommandResult[]>
 }
 ```
 
@@ -63,7 +64,8 @@ The `streamType` field tells you that what is being streamed is a file. Of
 course, you will also have known this because you requested a muxer, which will
 always stream a file. Additionally, the `component` field tells you exactly what
 kind of file stream this is. That's generally only useful for diagnostics, since
-you presumably know what it is (you asked for it!).
+you presumably know what it is (you asked for it!). The `sendCommands` method is
+for stream commands, documented in [STREAM-COMMANDS.md](STREAM-COMMANDS.md).
 
 
 # Input files
