@@ -126,7 +126,8 @@ Packet streams have the following form:
 {
     streamType: "packet",
     streams: Promise<StreamParameters[]>,
-    stream: ReadableStream<Packet[]>
+    stream: ReadableStream<Packet[]>,
+    sendCommands: (cmds: Command[]) => Promise<CommandResult[]>
 }
 ```
 
@@ -252,7 +253,8 @@ Frame streams have the following form:
 {
     streamType: "frame" | "libav-frame" | "webcodecs-frame",
     streams: Promise<StreamParameters[]>,
-    stream: ReadableStream<StreamFrame[]>
+    stream: ReadableStream<StreamFrame[]>,
+    sendCommands: (cmds: Command[]) => Promise<CommandResult[]>
 }
 ```
 
@@ -416,7 +418,8 @@ Output file streams have the following form:
 ```typescript
 {
     streamType: "file",
-    stream: ReadableStream<{position: number, data: Uint8Array}>
+    stream: ReadableStream<{position: number, data: Uint8Array}>,
+    sendCommands: (cmds: Command[]) => Promise<CommandResult[]>
 }
 ```
 
