@@ -275,8 +275,8 @@ be created. `Frame` is a libav.js frame, `number` is a libav.js frame pointer
 (you will only get pointers if you specifically ask for them), `VideoFrame` is a
 WebCodecs video frame, and `AudioData` is a WebCodecs audio frame.
 
-There are four initializers capable of creating frame streams: decoder, filter,
-frame selector, and user frame stream.
+There are five initializers capable of creating frame streams: decoder, filter,
+playback normalizer, frame selector, and user frame stream.
 
 ## Decoder
 
@@ -327,6 +327,50 @@ absent, then that kind of data will not be filtered.
 
 The I/O settings are libav.js `FilterIOSettings`. If absent, the output
 properties will be the same as the input properties.
+
+## Playback normalizer
+
+Though playback is not the primary purpose of TransAVormer, it is capable of
+being used for decoding for playback purposes. The playback normalizer is
+designed to convert the various formats that video and audio frames may take
+into consistent formats suitable for playback.
+
+Create a playback normalizer with a `"play-normalizer"` initializer:
+
+```javascript
+const out = await TransAVormer.build(libav, {
+    type: "play-normalizer",
+    sampleRate: ac.sampleRate,
+    input: inputData
+});
+```
+
+`sampleRate` is mandatory. Audio data will be resampled to the given sample rate
+for playback.
+
+Frames coming out of a playback normalizer are in one of three
+playback-optimized formats:
+
+ * WebCodecs VideoFrames. If `VideoFrame` is supported, then all video frames
+   will be converted to WebCodecs VideoFrames, as they can be drawn directly on
+   a canvas.
+
+ * libav.js video frames with ImageBitmap data. If `VideoFrame` is not
+   supported, then instead, video frames will be converted into an unusual (but
+   playable) format: libav.js `Frame` objects, but instead of `data` containing
+   raw pixel data, it will contain an `ImageBitmap` of the pixel data. This can
+   be drawn directly on a canvas.
+
+ * libav.js audio frames with planar floating-point data. Planar floating-point
+   audio data—that is, arrays of float arrays—is expected by most of the web
+   audio API.
+
+You can tell the difference between the three by their constituent fields.
+WebCodecs VideoFrames have a `codedWidth` field. libav.js video frames have a
+(non-zero) `width` field. libav.js audio frames have a (non-zero) `sampleRate`
+field.
+
+See `demo/player.html` for a complete playback example.
 
 ## Frame stream selector
 
