@@ -50,6 +50,7 @@
                 const ac = new AudioContext();
                 if (ac.state !== "running")
                     ac.resume();
+                ac.destination.channelCount = ac.destination.maxChannelCount;
                 const playback = await Weasound.createAudioPlayback(ac);
                 (playback.unsharedNode() || playback.sharedNode()).connect(ac.destination);
 
@@ -59,6 +60,7 @@
                 const out = await tav.build(la, {
                     type: "play-normalizer",
                     sampleRate: ac.sampleRate,
+                    channels: ac.destination.channelCount,
                     input: file
                 });
 

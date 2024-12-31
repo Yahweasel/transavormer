@@ -33,6 +33,12 @@ export class PlaybackNormalizer implements ifs.FrameStream {
 
         /**
          * @private
+         * Optional number of output channels.
+         */
+        private _channels: number | undefined,
+
+        /**
+         * @private
          * LibAV instance.
          */
         private _libav: LibAVT.LibAV,
@@ -104,6 +110,14 @@ export class PlaybackNormalizer implements ifs.FrameStream {
                             channelLayout = frame.channel_layout;
                         else if (frame.channels && frame.channels !== 1)
                             channelLayout = (1 << frame.channels) - 1;
+                        let outChannelLayout = 4;
+                        if (this._channels) {
+                            outChannelLayout = la.ff_channel_layout({
+                                channels: this._channels
+                            });
+                        } else {
+                            outChannelLayout = channelLayout;
+                        }
                         const [filterGraph, src, sink] =
                             await la.ff_init_filter_graph(
                                 "aresample",
@@ -120,7 +134,8 @@ export class PlaybackNormalizer implements ifs.FrameStream {
                                     type: la.AVMEDIA_TYPE_AUDIO,
                                     sample_fmt: la.AV_SAMPLE_FMT_FLTP,
                                     sample_rate: this._sampleRate,
-                                    channel_layout: channelLayout
+                                    channel_layout: outChannelLayout,
+                                    time_base: [1, this._sampleRate]
                                 }
                             );
 
@@ -245,7 +260,7 @@ export class PlaybackNormalizer implements ifs.FrameStream {
         input: Promise<ifs.FrameStreamAny>
     ): Promise<ifs.FrameStream> {
         const ret = new PlaybackNormalizer(
-            init.sampleRate, libav, input
+            init.sampleRate, init.channels, libav, input
         );
         await ret._init();
         return ret;

@@ -345,12 +345,14 @@ Create a playback normalizer with a `"play-normalizer"` initializer:
 const out = await TransAVormer.build(libav, {
     type: "play-normalizer",
     sampleRate: ac.sampleRate,
+    channels: ac.destination.channelCount,
     input: inputData
 });
 ```
 
 `sampleRate` is mandatory. Audio data will be resampled to the given sample rate
-for playback.
+for playback. `channels` is optional but recommended; audio data will be mixed
+or split to the selected number of channels.
 
 Frames coming out of a playback normalizer are in one of three
 playback-optimized formats:

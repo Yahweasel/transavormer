@@ -233,6 +233,7 @@ export interface InitFrameNormalizerPtr {
 export interface InitPlaybackNormalizer {
     type: "play-normalizer";
     sampleRate: number;
+    channels?: number;
     input: InitFrameStream;
 }
 
