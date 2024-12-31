@@ -415,6 +415,23 @@ export interface CommandResult extends Command {
 }
 
 /**
+ * A reselect command. Reinitializes the mapping for a stream selector.
+ */
+export interface ReselectCommand extends Command {
+    c: "reselect";
+
+    /**
+     * The new selection to use.
+     */
+    selection: Selection | Selection[];
+}
+
+/**
+ * A reselect command result.
+ */
+export type ReselectCommandResult = ReselectCommand & CommandResult;
+
+/**
  * A seek command. Seeks to the specified time.
  */
 export interface SeekCommand extends Command {

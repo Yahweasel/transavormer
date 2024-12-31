@@ -56,5 +56,11 @@ export type InitMuxer = ifs.InitMuxer;
 export type InitPacketStream = ifs.InitPacketStream;
 export type InitFrameStream = ifs.InitFrameStream;
 export type Init = ifs.Init;
+export type Command = ifs.Command;
+export type CommandResult = ifs.CommandResult;
+export type ReselectCommand = ifs.ReselectCommand;
+export type ReselectCommandResult = ifs.ReselectCommandResult;
+export type SeekCommand = ifs.SeekCommand;
+export type SeekCommandResult = ifs.SeekCommandResult;
 
 export const build = factory.build;

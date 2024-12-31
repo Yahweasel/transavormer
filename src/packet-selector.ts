@@ -16,6 +16,7 @@
 
 import type * as LibAVT from "@libav.js/types";
 
+import * as cmdsM from "./commands";
 import * as ifs from "./interfaces";
 import * as sel from "./selector";
 
@@ -45,6 +46,7 @@ export class PacketSelector implements ifs.PacketStream {
         this.ptr = false;
         this.stream = new ReadableStream({});
         this.streams = Promise.resolve([]);
+        this._mapping = [];
     }
 
     /**
@@ -56,7 +58,7 @@ export class PacketSelector implements ifs.PacketStream {
         const input = await this._inputP;
         this.ptr = <false> input.ptr;
         const streams = await input.streams;
-        const mapping = await sel.mkMapping(streams, this._sel);
+        const mapping = this._mapping = await sel.mkMapping(streams, this._sel);
         const rdr = input.stream.getReader();
 
         const outStreams: ifs.StreamParameters[] = [];
@@ -83,7 +85,7 @@ export class PacketSelector implements ifs.PacketStream {
                         else
                             streamIndex = packet.stream_index||0;
 
-                        const outStreamIndex = mapping[streamIndex];
+                        const outStreamIndex = this._mapping[streamIndex];
 
                         if (outStreamIndex < 0) {
                             if (typeof packet === "number")
@@ -107,6 +109,19 @@ export class PacketSelector implements ifs.PacketStream {
     }
 
     async sendCommands(cmds: ifs.Command[]): Promise<ifs.CommandResult[]> {
+        const cmdsR = cmdsM.addResults(cmds);
+
+        for (const cmd of cmdsR) {
+            if (cmd.c === "reselect" && !cmd.ran) {
+                const reselect = <ifs.ReselectCommandResult> cmd;
+                this._mapping = sel.mkMapping(
+                    await this.streams, reselect.selection
+                );
+                cmd.ran = true;
+                cmd.success = true;
+            }
+        }
+
         const input = await this._inputP;
         return input.sendCommands(cmds);
     }
@@ -138,4 +153,9 @@ export class PacketSelector implements ifs.PacketStream {
      * LibAV streams in the file.
      */
     streams: Promise<ifs.StreamParameters[]>;
+
+    /**
+     * Mapping of input streams to output streams.
+     */
+    private _mapping: number[];
 }

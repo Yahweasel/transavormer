@@ -3,8 +3,6 @@ beginning-to-end streams of their data. However, it is sometimes necessary to
 change that behavior. For this purpose, TransAVormer supports *stream commands*,
 which are commands that can be sent to alter the behavior of a stream.
 
-Currently, the only stream command supported is `seek`.
-
 To send stream commands, call the `sendCommands` method of your output stream
 with an array of commands. Note that you should always call the final stream,
 and not the stream most suited to receive the command; all streams will forward
@@ -26,6 +24,7 @@ results, which have the following form:
 
 ```typescript
 {
+    c: string,
     ran: boolean,
     success: boolean,
     diagnostic: any[]
@@ -41,10 +40,36 @@ If the command was interpreted and executed but resulted in an error, then
 `success` will be false. A diagnostic of some kind *may* be put in the
 `diagnostic` array, but that is not guaranteed on failure.
 
+The command results are actually added directly into the command objects, so all
+parameters are present as well. For this reason, you should not reuse command
+objects.
+
+Each stream command is documented in a section below.
+
+
+# Reselect
+
+A reselect command changes the selection mapping for a packet selector or frame
+selector. Note that it changes the *mapping*, but whether this can be usefully
+interpreted by later components of the pipeline is your problem. If you change
+the mapping such that a codec changes, or the number of streams changes, the
+pipeline will fail spectacularly. Mind your maps.
+
+A reselect command has the following form:
+
+```typescript
+{
+    c: "reselect",
+    selection: <same form as selector initializers>
+}
+```
+
+The selection mapping is immediately updated based on the new selection.
+
 
 # Seek
 
-The only command currently implemented is `seek`. A seek command has the
+A seek command seeks in the input file, if possible. A seek command has the
 following form:
 
 ```typescript
