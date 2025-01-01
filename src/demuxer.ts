@@ -129,8 +129,34 @@ export class Demuxer implements ifs.PacketStream {
                 <ifs.StreamParameters> await la.ff_copyout_codecpar(stream.codecpar);
             spar.time_base_num = stream.time_base_num;
             spar.time_base_den = stream.time_base_den;
+            if (stream.duration_time_base >= 0) {
+                spar.duration_time_base = stream.duration_time_base;
+                spar.duration = stream.duration;
+            }
             spars.push(spar);
         }
+
+        // Propagate the file duration if the stream duration isn't set
+        {
+            let fileDuration = la.i64tof64(
+                await la.AVFormatContext_duration(fmtCtx),
+                await la.AVFormatContext_durationhi(fmtCtx)
+            );
+            if (fileDuration >= 0) {
+                // FIXME: missing type
+                fileDuration /= (<any> la).AV_TIME_BASE;
+                for (const stream of spars) {
+                    if (!stream.duration) {
+                        stream.duration = fileDuration;
+                        stream.duration_time_base = Math.round(
+                            fileDuration * stream.time_base_den /
+                            stream.time_base_num
+                        );
+                    }
+                }
+            }
+        }
+
         this.streams = Promise.resolve(spars);
 
         const pkt = await la.av_packet_alloc();

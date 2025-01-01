@@ -72,7 +72,9 @@ export type StreamFramePtr = WebCodecsStreamFrame | LibAVStreamFramePtr;
  */
 export type StreamParameters = LibAVT.CodecParameters & {
     time_base_num: number,
-    time_base_den: number
+    time_base_den: number,
+    duration_time_base?: number,
+    duration?: number
 };
 
 /**
