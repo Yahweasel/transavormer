@@ -20,6 +20,11 @@ import * as cmdsM from "./commands";
 import * as ifs from "./interfaces";
 
 /**
+ * Default chunk size is 64k.
+ */
+const defaultChunkSize = 65536;
+
+/**
  * LibAV extended with our own reader.
  */
 type LibAVDemux = LibAVT.LibAV & {
@@ -43,6 +48,12 @@ export class Demuxer implements ifs.PacketStream {
 
         /**
          * @private
+         * Chunk size to read.
+         */
+        private _chunkSize,
+
+        /**
+         * @private
          * LibAV instance.
          */
         private _libav: LibAVDemux,
@@ -51,13 +62,7 @@ export class Demuxer implements ifs.PacketStream {
          * @private
          * Input file.
          */
-        private _input: ifs.InputFile,
-
-        /**
-         * @private
-         * Chunk size to read.
-         */
-        private _chunkSize = 65536
+        private _input: ifs.InputFile
     ) {
         this.ptr = <false> ptr;
         this.stream = new ReadableStream({});
@@ -269,7 +274,7 @@ export class Demuxer implements ifs.PacketStream {
         init: ifs.InitDemuxer | ifs.InitDemuxerPtr
     ): Promise<ifs.PacketStreamAny> {
         const ret = new Demuxer(
-            !!init.ptr, libav, init.input
+            !!init.ptr, init.chunkSize || defaultChunkSize, libav, init.input
         );
         await ret._init();
         return <any> ret;

@@ -153,6 +153,7 @@ export interface FileStream extends Transformer {
 export interface InitDemuxer {
     type: "demuxer";
     ptr?: false;
+    chunkSize?: number;
     input: InputFile;
 }
 
@@ -162,6 +163,7 @@ export interface InitDemuxer {
 export interface InitDemuxerPtr {
     type: "demuxer";
     ptr: true;
+    chunkSize?: number;
     input: InputFile;
 }
 

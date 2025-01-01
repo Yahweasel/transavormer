@@ -151,9 +151,20 @@ Create a demuxer with a `"demuxer"` initializer:
 ```javascript
 const out = await TransAVormer.build(libav, {
     type: "demuxer",
+    chunkSize: 65536,
     input: inputFile
 });
 ```
+
+The `chunkSize` field is optional, and defaults to `65536`. It is the size (in
+bytes) of chunks that will be sent (as arrays of packets) through the readable
+stream. Note that while this default may seem small, it affects the chunk size
+of later steps, and after decoding, it could easily be 100x the size, so you're
+not recommended to use a larger chunk size. Using a smaller chunk size is
+recommended for faster responsiveness; in fact, if responsiveness is key, then
+the recommended chunk size is `1`. Note that the reader simply stops reading
+packets when it exceeds the chunk size. It will always send complete packets, so
+in fact, the chunks will usually be slightly larger than this size.
 
 The only input form accepted for demuxing is input files. Demuxers have the
 component `"demuxer"`.
