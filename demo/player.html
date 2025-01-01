@@ -64,7 +64,11 @@
                     type: "play-normalizer",
                     sampleRate: ac.sampleRate,
                     channels: ac.destination.channelCount,
-                    input: file
+                    input: {
+                        type: "demuxer",
+                        chunkSize: 1,
+                        input: file
+                    }
                 });
 
                 // Set up the seek bar
