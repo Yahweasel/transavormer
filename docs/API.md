@@ -378,6 +378,9 @@ field.
 
 See `demo/player.html` for a complete playback example.
 
+All input forms are valid for play normalizers, but the obvious input form is a
+frame stream. Play normalizers have the component `"play-normalizer"`.
+
 ## Frame stream selector
 
 To avoid extra processing steps, it is far wiser to select *packets* than
