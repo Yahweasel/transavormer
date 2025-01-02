@@ -79,11 +79,11 @@
                 }
                 seekBar.max = Math.round(duration * 1000);
                 seekBar.value = 0;
-                seekBar.onchange = async () => {
-                    console.log(await out.sendCommands([{
+                seekBar.oninput = () => {
+                    out.sendCommands([{
                         c: "seek",
                         time: seekBar.value / 1000
-                    }]));
+                    }]);
                 };
 
                 const streams = out.stream.tee();
@@ -129,8 +129,11 @@
                                     const delay = targetTime - now;
                                     if (delay > 100 || delay < -100) {
                                         videoOffset = now - frameTime;
-                                    } else if (delay > 0) {
-                                        await new Promise(res => setTimeout(res, delay));
+                                    }
+                                    if (delay > 0) {
+                                        await new Promise(res => setTimeout(
+                                            res, Math.min(delay, 100)
+                                        ));
                                     }
                                     canvas.width = frame.codedWidth || frame.width;
                                     canvas.height = frame.codedHeight || frame.height;

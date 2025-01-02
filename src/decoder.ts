@@ -190,6 +190,8 @@ export class Decoder implements ifs.FrameStream {
 
                             }
                         }
+                        controller.enqueue([]);
+                        break;
                     }
 
                     // Group packets by stream

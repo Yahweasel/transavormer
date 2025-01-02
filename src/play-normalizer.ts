@@ -70,21 +70,6 @@ export class PlaybackNormalizer implements ifs.FrameStream {
 
         this.stream = new ReadableStream({
             pull: async (controller) => {
-                const rd = await packetStream.read();
-                if (rd.done) {
-                    controller.close();
-
-                    // Clean up our allocations
-                    await la.av_frame_free_js(this._frame);
-                    await la.av_frame_free_js(this._outFrame);
-                    for (const idx in this._filterGraph)
-                        await la.avfilter_graph_free_js(this._filterGraph[idx]);
-                    for (const idx in this._sws)
-                        await la.sws_freeContext(this._sws[idx]);
-
-                    return;
-                }
-
                 const outFrames: ifs.StreamFrame[] = [];
 
                 // Converters to fltp
@@ -159,83 +144,113 @@ export class PlaybackNormalizer implements ifs.FrameStream {
                     }
                 };
 
-                for (const streamFrame of rd.value) {
-                    const frame = streamFrame.frame;
-                    if ((<wcp.VideoFrame> frame).codedWidth) {
-                        // Video frames are already playable
-                        outFrames.push(<ifs.WebCodecsStreamFrame> streamFrame);
+                while (true) {
+                    const rd = await packetStream.read();
+                    if (rd.done) {
+                        controller.close();
 
-                    } else if ((<wcp.AudioData> frame).sampleRate) {
-                        /* AudioData needs to be converted into an appropriate
-                         * libav format. */
-                        const af = <wcp.AudioData> frame;
-                        const laFrame = await lawc.audioDataToLAFrame(af);
-                        await toFLTP(streamFrame.streamIndex, laFrame);
+                        // Clean up our allocations
+                        await la.av_frame_free_js(this._frame);
+                        await la.av_frame_free_js(this._outFrame);
+                        for (const idx in this._filterGraph)
+                            await la.avfilter_graph_free_js(this._filterGraph[idx]);
+                        for (const idx in this._sws)
+                            await la.sws_freeContext(this._sws[idx]);
+                        break;
+                    }
 
-                    } else { 
-                        // Already a libav frame, but might be a pointer
-                        let laFrame = <LibAVT.Frame> frame;
-                        if (typeof frame === "number") {
-                            laFrame = await la.ff_copyout_frame(frame);
-                            await la.av_frame_unref(frame);
-                        }
+                    if (rd.value.length === 0) {
+                        // Empty array indicates seeking, so a discontinuity
+                        for (const idx in this._filterGraph)
+                            await la.avfilter_graph_free_js(this._filterGraph[idx]);
+                        this._filterGraph = {};
+                        this._bufferSource = {};
+                        this._bufferSink = {};
+                        controller.enqueue([]);
+                        break;
+                    }
 
-                        if (laFrame.width) {
-                            /* Video frame. Either convert to a VideoFrame (if
-                             * the host supports it) or to an ImageBitmap
-                             * otherwise. */
-                            if (typeof VideoFrame !== "undefined") {
-                                const vf = await lawc.laFrameToVideoFrame(
-                                    laFrame, {transfer: true}
-                                );
-                                outFrames.push({
-                                    streamIndex: streamFrame.streamIndex,
-                                    frame: vf
-                                });
+                    for (const streamFrame of rd.value) {
+                        const frame = streamFrame.frame;
+                        if ((<wcp.VideoFrame> frame).codedWidth) {
+                            // Video frames are already playable
+                            outFrames.push(<ifs.WebCodecsStreamFrame> streamFrame);
 
-                            } else {
-                                /* Only universally drawable format is
-                                 * ImageBitmap, which has to be RGBA. */
-                                let sws = this._sws[streamFrame.streamIndex];
-                                if (!sws) {
-                                    // Create a scalar instance
-                                    sws = await la.sws_getContext(
-                                        laFrame.width, laFrame.height, laFrame.format,
-                                        laFrame.width, laFrame.height, la.AV_PIX_FMT_RGBA,
-                                        0, 0, 0, 0
+                        } else if ((<wcp.AudioData> frame).sampleRate) {
+                            /* AudioData needs to be converted into an appropriate
+                             * libav format. */
+                            const af = <wcp.AudioData> frame;
+                            const laFrame = await lawc.audioDataToLAFrame(af);
+                            await toFLTP(streamFrame.streamIndex, laFrame);
+
+                        } else { 
+                            // Already a libav frame, but might be a pointer
+                            let laFrame = <LibAVT.Frame> frame;
+                            if (typeof frame === "number") {
+                                laFrame = await la.ff_copyout_frame(frame);
+                                await la.av_frame_unref(frame);
+                            }
+
+                            if (laFrame.width) {
+                                /* Video frame. Either convert to a VideoFrame (if
+                                 * the host supports it) or to an ImageBitmap
+                                 * otherwise. */
+                                if (typeof VideoFrame !== "undefined") {
+                                    const vf = await lawc.laFrameToVideoFrame(
+                                        laFrame, {transfer: true}
                                     );
-                                    this._sws[streamFrame.streamIndex] = sws;
+                                    outFrames.push({
+                                        streamIndex: streamFrame.streamIndex,
+                                        frame: vf
+                                    });
+
+                                } else {
+                                    /* Only universally drawable format is
+                                     * ImageBitmap, which has to be RGBA. */
+                                    let sws = this._sws[streamFrame.streamIndex];
+                                    if (!sws) {
+                                        // Create a scalar instance
+                                        sws = await la.sws_getContext(
+                                            laFrame.width, laFrame.height, laFrame.format,
+                                            laFrame.width, laFrame.height, la.AV_PIX_FMT_RGBA,
+                                            0, 0, 0, 0
+                                        );
+                                        this._sws[streamFrame.streamIndex] = sws;
+                                    }
+
+                                    await la.av_frame_unref(this._frame);
+                                    await la.av_frame_unref(this._outFrame);
+                                    await la.ff_copyin_frame(this._frame, laFrame);
+                                    // FIXME: Check for errors
+                                    await la.sws_scale_frame(sws, this._outFrame, this._frame);
+                                    await la.av_frame_unref(this._frame);
+                                    const id = await la.ff_copyout_frame_video_imagedata(
+                                        this._outFrame
+                                    );
+                                    await la.av_frame_unref(this._outFrame);
+                                    laFrame.data = await createImageBitmap(id);
+
+                                    outFrames.push({
+                                        streamIndex: streamFrame.streamIndex,
+                                        frame: laFrame
+                                    });
+
                                 }
 
-                                await la.av_frame_unref(this._frame);
-                                await la.av_frame_unref(this._outFrame);
-                                await la.ff_copyin_frame(this._frame, laFrame);
-                                // FIXME: Check for errors
-                                await la.sws_scale_frame(sws, this._outFrame, this._frame);
-                                await la.av_frame_unref(this._frame);
-                                const id = await la.ff_copyout_frame_video_imagedata(
-                                    this._outFrame
-                                );
-                                await la.av_frame_unref(this._outFrame);
-                                laFrame.data = await createImageBitmap(id);
-
-                                outFrames.push({
-                                    streamIndex: streamFrame.streamIndex,
-                                    frame: laFrame
-                                });
+                            } else {
+                                // Audio frame
+                                await toFLTP(streamFrame.streamIndex, laFrame);
 
                             }
 
-                        } else {
-                            // Audio frame
-                            await toFLTP(streamFrame.streamIndex, laFrame);
-
                         }
+                    }
 
+                    if (outFrames.length) {
+                        controller.enqueue(outFrames);
+                        break;
                     }
                 }
-
-                controller.enqueue(outFrames);
             }
         });
     }
