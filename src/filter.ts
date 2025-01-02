@@ -85,7 +85,7 @@ export class LAFilter implements ifs.LibAVFrameStream {
         });
 
         // Filters, per stream
-        const filters: Record<number, [number, number, number]> = {};
+        let filters: Record<number, [number, number, number]> = {};
 
         // Create the stream
         this.stream = new ReadableStream({
@@ -95,6 +95,18 @@ export class LAFilter implements ifs.LibAVFrameStream {
                     const inFrameData = await frameStream.read();
                     const eof = inFrameData.done;
                     const inFrames = inFrameData.value || [];
+
+                    if (!eof && inFrames.length === 0) {
+                        /* Empty array indicates a seek. Dump current data to
+                         * reinitialize our filters. */
+                        for (const idx in filters) {
+                            const filter = filters[idx];
+                            await la.avfilter_graph_free_js(filter[0]);
+                        }
+                        filters = {};
+                        controller.enqueue([]);
+                        break;
+                    }
 
                     // Group frames by stream
                     const framesByStr: Record<
