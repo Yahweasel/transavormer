@@ -32,7 +32,15 @@ understanding of such digital media concepts as multiplexing and codecs. The
 terminology used here is the terminology used by FFmpeg, and may not exactly
 match the terminology used by other systems; the term “packet” is used for
 *encoded* chunks of data, and “frame” is used for *unencoded* chunks of data
-(both video and audio).
+(both video and audio). A “crash course” in digital media is provided in
+[AV-CRASH-COURSE.md](AV-CRASH-COURSE.md).
+
+Frame and packet times in TransAVormer can either be in libav.js format or
+WebCodecs formats. In libav.js (as in FFmpeg/libav), timestamps carry their
+timebase with them, as `time_base_num` and `time_base_den`, so to convert a
+timestamp to seconds, you multiply by `time_base_num` (the numerator) and divide
+by `time_base_den` (the denominator). WebCodecs timestamps are always in
+microseconds.
 
 The various types can all be used as `input` fields to `build` initializers.
 TransAVormer will find the necessary transformations to make the input type
