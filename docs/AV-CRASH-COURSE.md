@@ -30,9 +30,7 @@ rate, expressed in frames per second. Common framerates are 24, 25, 30, 50, and
 60000/1001.
 
 The actual light and color information in a video frame can be stored in various
-different formats. The most common is known as YUV 4:2:0, but YUV 4:4:4, RGB24,
-and RGBA are also fairly common. Ultimately, these formats are unimportant for
-using TransAVormer, but they're terms you may encounter.
+different formats, discussed below.
 
 The goal of a digital video system is to get frames out of a file (or protocol,
 stream, whatever) and onto a display at the correct rate.
