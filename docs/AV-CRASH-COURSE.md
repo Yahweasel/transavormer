@@ -176,7 +176,7 @@ will be discussed later):
  * YUV and the closely related YCbCr. Y stands for luminance (somehow), i.e.,
    lightness. U and V (or Cb and Cr) describe the color as two degrees of
    rotation. In short, if RGB color is the description of a color vector by its
-   lenght in each axis, then YUV is a description of the same color vector by
+   length in each axis, then YUV is a description of the same color vector by
    its length (Y) and rotation about two axes (U and V, or Cb and Cr). The
    important part is that this separates a single dimension of lightness from
    two dimensions of color in a more efficient way than HSL.
@@ -538,14 +538,14 @@ techniques have improved.
 Historically, the Misanthropic Patent Extortion Gang (MPEG) dominated the entire
 space of video encodings, and many of their encodings remain popular. Very few
 organizations or people in this world are unambiguously evil, but MPEG is one of
-them. MPEG does not develop anything; they are a consortium the pools ideas (and
-patents), and as time has gone on, their priority has changed from pooling the
-best ideas to pooling the ideas most encumbered by the most patents. MPEG
+them. MPEG does not develop anything; they are a consortium that pools ideas
+(and patents), and as time has gone on, their priority has changed from pooling
+the best ideas to pooling the ideas most encumbered by the most patents. MPEG
 technology should be avoided wherever possible.
 
 A modern video codec that is just starting (as of the writing of this document)
-to get widespred use is AV1. AV1 was created by a consortium created as a
-response to MPEG, the Alliance for Open Media, and is unencumbered by patents.
+to get widespred use is AV1. AV1 was created by the Alliance for Open Media, a
+consortium created as a response to MPEG, and is unencumbered by patents.
 
 On the web, the VP9 codec is still quite popular; it was created by Google to be
 an open codec, and while it was perfectly acceptable for its time, it's not
@@ -757,14 +757,14 @@ doesn't have a defined way of storing it in Matroska, it is almost certain that
 someone will define it.
 
 As a consequence of Matroska's generalness, seeing a .mkv file tells you even
-less about what's in it than seeing a .mp4 file. As a consequence, to make
-things more predictable, Google created a restricted subset of Matroska called
-WebM. WebM may only contain certain video and audio codecs. Periodically the
-list is amended, but at the time of this writing, the supported video codecs are
-AV1, VP9, and VP8, and the supported audio codecs are Opus and Vorbis. Other
-than that restriction (and the removal of an optional component in Matroska
-that's not relevant here), Matroska and WebM are the same. All WebM files are
-valid Matroska files.
+less about what's in it than seeing a .mp4 file. To make things more
+predictable, Google created a restricted subset of Matroska called WebM. WebM
+may only contain certain video and audio codecs. Periodically the list is
+amended, but at the time of this writing, the supported video codecs are AV1,
+VP9, and VP8, and the supported audio codecs are Opus and Vorbis. Other than
+that restriction (and the removal of an optional component in Matroska that's
+not relevant here), Matroska and WebM are the same. All WebM files are valid
+Matroska files.
 
 Because of solving-too-many-problems-ism, many features of Matroska aren't
 guaranteed in all Matroska files.

@@ -1,6 +1,6 @@
 TransAVormer has only one entry function, `build`. `build` takes a descriptor
 (called an “initializer”) of what kind of transformation you wish to perform.
-Every initialier has a `type` field and an `input` field, and some have other
+Every initializer has a `type` field and an `input` field, and some have other
 fields, which will vary based on the transformer being built. TransAVormer is a
 frontend to libav.js and WebCodecs, so in addition, it requires a
 [libav.js](https://github.com/Yahweasel/libav.js) instance. For instance, to
