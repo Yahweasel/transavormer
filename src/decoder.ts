@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Yahweasel
+ * Copyright (c) 2024, 2025 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,7 @@ import * as ifs from "./interfaces";
 declare let AudioDecoder: typeof wcp.AudioDecoder;
 
 type Frame = LibAVT.Frame | wcp.VideoFrame | wcp.AudioData;
-type LibAVDecoder = [number, number, number, number];
+type LibAVDecoder = [LibAVT.LibAV, [number, number, number, number]];
 type AnyDecoder = LibAVDecoder | wcp.VideoDecoder | wcp.AudioDecoder;
 
 /**
@@ -38,6 +38,12 @@ export class Decoder implements ifs.FrameStream {
          * libav.js instance.
          */
         private _libav: LibAVT.LibAV,
+
+        /**
+         * @private
+         * Optional libav.js constructor.
+         */
+        private _LibAV: LibAVT.LibAVWrapper | undefined,
 
         /**
          * @private
@@ -106,14 +112,35 @@ export class Decoder implements ifs.FrameStream {
 
             }
 
+            /* If we were given the ability to load new libavs, check if we need
+             * to for this stream. */
+            let streamLA = la;
+            if (this._LibAV) {
+                let decoder = 0;
+                try {
+                    decoder = await la.avcodec_find_decoder(stream.codec_id);
+                } catch (ex) {}
+                if (!decoder) {
+                    const desc = await la.avcodec_descriptor_get(stream.codec_id);
+                    if (desc) {
+                        const name = await la.AVCodecDescriptor_name(desc);
+                        streamLA = await this._LibAV.LibAV({
+                            variant: `decoder-${name}`
+                        });
+                    }
+                }
+            }
+
             // Initialize the decoder
-            const lad = await la.ff_init_decoder(stream.codec_id, {
+            const lad = await streamLA.ff_init_decoder(stream.codec_id, {
                 codecpar: stream,
                 time_base: [stream.time_base_num, stream.time_base_den]
             });
-            decoders.push(lad);
+            decoders.push([streamLA, lad]);
             destructors.push(async () => {
-                await la.ff_free_decoder(lad[1], lad[2], lad[3]);
+                await streamLA.ff_free_decoder(lad[1], lad[2], lad[3]);
+                if (streamLA !== la)
+                    streamLA.terminate();
             });
         }
 
@@ -151,8 +178,9 @@ export class Decoder implements ifs.FrameStream {
                             if (!dec)
                                 continue;
                             if ((<LibAVDecoder> dec).length) {
-                                const [, c, pkt, frame] = <LibAVDecoder> dec;
-                                const res = await la.ff_decode_multi(
+                                const [streamLA, [, c, pkt, frame]] =
+                                    <LibAVDecoder> dec;
+                                const res = await streamLA.ff_decode_multi(
                                     c, pkt, frame, [], {
                                         fin: true,
                                         copyoutFrame: <any> (this.ptr ? "ptr" : "default")
@@ -180,8 +208,8 @@ export class Decoder implements ifs.FrameStream {
                                 continue;
                             if ((<LibAVDecoder> dec).length) {
                                 // LibAV decoder
-                                const [, c] = <LibAVDecoder> dec;
-                                await (<any> this._libav).avcodec_flush_buffers(c);
+                                const [streamLA, [, c]] = <LibAVDecoder> dec;
+                                await streamLA.avcodec_flush_buffers(c);
 
                             } else {
                                 // WebCodecs decoder
@@ -221,8 +249,9 @@ export class Decoder implements ifs.FrameStream {
                         const dec = decoders[i];
                         if ((<LibAVDecoder> dec).length) {
                             // libav.js decoder
-                            const [, c, pkt, frame] = <LibAVDecoder> dec;
-                            const res = await la.ff_decode_multi(
+                            const [streamLA, [, c, pkt, frame]] =
+                                <LibAVDecoder> dec;
+                            const res = await streamLA.ff_decode_multi(
                                 c, pkt, frame, packets, {
                                     copyoutFrame: <any> (this.ptr ? "ptr" : "default")
                                 }
@@ -286,7 +315,7 @@ export class Decoder implements ifs.FrameStream {
         input: Promise<ifs.PacketStreamAny>
     ): Promise<ifs.FrameStreamAny> {
         const ret = new Decoder(
-            !!init.ptr, libav, input
+            !!init.ptr, libav, (<ifs.InitDecoder> init).LibAV, input
         );
         await ret._init();
         return <any> ret;

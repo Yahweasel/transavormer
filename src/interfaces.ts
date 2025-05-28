@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Yahweasel
+ * Copyright (c) 2024, 2025 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -155,6 +155,12 @@ export interface InitDemuxer {
     ptr?: false;
     chunkSize?: number;
     input: InputFile;
+
+    /**
+     * Override the libav used for the demuxer. This is so that you can load a
+     * modular, single-purpose demuxer for the file you're demuxing.
+     */
+    libav?: LibAVT.LibAV;
 }
 
 /**
@@ -193,6 +199,18 @@ export interface InitDecoder {
     type: "decoder";
     ptr?: false;
     input: InitPacketStream;
+
+    /**
+     * Override the libav used for the demuxer. This is so that you can load a
+     * modular, single-purpose demuxer for the file you're demuxing.
+     */
+    libav?: LibAVT.LibAV;
+
+    /**
+     * Alternatively, provide a libav wrapper, and the appropriate modular
+     * decoder will be loaded automatically.
+     */
+    LibAV?: LibAVT.LibAVWrapper;
 }
 
 /**

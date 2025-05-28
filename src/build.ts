@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Yahweasel
+ * Copyright (c) 2024, 2025 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -108,7 +108,13 @@ function buildDemuxer(
         }, ptr);
     }
 
-    init.ptr = ptr;
+    if (init.libav) {
+        libav = init.libav;
+        init.ptr = false;
+    } else {
+        init.ptr = ptr;
+    }
+
     return demuxer.Demuxer.build(libav, init);
 }
 
@@ -124,7 +130,7 @@ function buildPacketSelector(
     );
 }
 
-function buildDecoder(
+async function buildDecoder(
     libav: LibAVT.LibAV,
     init: any, ptr: boolean
 ): Promise<ifs.FrameStream> {
@@ -144,9 +150,22 @@ function buildDecoder(
         }, ptr);
     }
 
+    let packetStreamP: Promise<ifs.PacketStream> = buildPacketStream(
+        libav, init.input, true
+    );
+
     init.ptr = ptr;
+
+    if (init.libav) {
+        libav = init.libav;
+        init.ptr = false;
+    }
+
+    if (init.LibAV)
+        init.ptr = false;
+
     return decoder.Decoder.build(
-        libav, init, buildPacketStream(libav, init.input, true)
+        libav, init, packetStreamP
     );
 }
 
