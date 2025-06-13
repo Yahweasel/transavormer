@@ -160,7 +160,8 @@ Create a demuxer with a `"demuxer"` initializer:
 const out = await TransAVormer.build(libav, {
     type: "demuxer",
     chunkSize: 65536,
-    input: inputFile
+    input: inputFile,
+    libav: libav
 });
 ```
 
@@ -173,6 +174,13 @@ recommended for faster responsiveness; in fact, if responsiveness is key, then
 the recommended chunk size is `1`. Note that the reader simply stops reading
 packets when it exceeds the chunk size. It will always send complete packets, so
 in fact, the chunks will usually be slightly larger than this size.
+
+The `libav` field is optional and probably seems redundant. Its purpose is to
+aid in using modular builds of libav.js. You can load a libav.js instance
+that's specific to the particular format you're using, and have TransAVormer
+use that instead of the libav.js instance it uses everywhere else. See
+[modular-transcode.html](../demo/modular-transcode.html) for a demo of using
+modular builds.
 
 The only input form accepted for demuxing is input files. Demuxers have the
 component `"demuxer"`.
@@ -308,13 +316,25 @@ Create a decoder with a `"decoder"` initializer:
 ```javascript
 const out = await TransAVormer.build(libav, {
     type: "decoder",
-    input: inputData
+    input: inputData,
+    libav: libav,
+    LibAV: LibAV
 });
 ```
 
 Packet streams and input files (or initialiers for packet streams or input
 files) are accepted as input to decoders. Frame streams cannot be provided
 directly as input to a decoder.
+
+The `libav` and `LibAV` fields are optional, and are provided to enable the use
+of modular builds of libav.js. If `libav` is provided, it will be used in place
+of the global libav.js instance. If `LibAV` is provided, then the global
+libav.js instance will be used to decide which decoder(s) is/are needed, and
+then a variant named `decoder-<codec>` will be loaded for each necessary codec,
+using `LibAV` as the entry point. This way, you can use the demuxer's libav.js
+to identify the codecs, and then load each codec from a modular build. See
+[modular-transcode.html](../demo/modular-transcode.html) for a demo of using
+modular builds.
 
 All codec parameters are determined and arbitrated by the `streams` parameter of
 `input`, so no codec information is required (or allowed) in the initializer.
