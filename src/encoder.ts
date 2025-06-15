@@ -611,7 +611,7 @@ async function mkFilter(
             "aresample",
             {
                 sample_rate: frame.sample_rate,
-                channel_layout: frame.channel_layout,
+                channel_layout: la.ff_channel_layout(frame),
                 sample_fmt: frame.format,
                 time_base: frame.time_base_num
                     ? [frame.time_base_num, frame.time_base_den]
