@@ -421,6 +421,11 @@ async function tryVideoEncoder(
             config.width = inStream.width;
         if (!config.height)
             config.height = inStream.height;
+
+        const supp = await VideoEncoder.isConfigSupported(<any> config);
+        if (!supp || !supp.supported)
+            return null;
+
         const stream = await lawc.configToVideoStream(la, config);
         // FIXME: What if there are no packets?
         let sparRes: (x:ifs.StreamParameters)=>void | null = null;
@@ -479,6 +484,11 @@ async function tryAudioEncoder(
             config.sampleRate = inStream.sample_rate;
         if (!config.numberOfChannels)
             config.numberOfChannels = inStream.channels;
+
+        const supp = await AudioEncoder.isConfigSupported(config);
+        if (!supp || !supp.supported)
+            return null;
+
         const stream = await lawc.configToAudioStream(la, config);
         let sparRes: (x:ifs.StreamParameters)=>void | null = null;
         const sparP = new Promise<ifs.StreamParameters>(
