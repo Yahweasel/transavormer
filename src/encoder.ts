@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Yahweasel
+ * Copyright (c) 2024, 2025 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -98,7 +98,11 @@ export class Encoder implements ifs.PacketStream {
                 if (wce) {
                     streams.push(wce[0]);
                     encoders.push(wce[1]);
-                    destructors.push(async () => wce[1].close());
+                    destructors.push(async () => {
+                        try {
+                            wce[1].close()
+                        } catch (ex) {}
+                    });
                     continue;
                 }
 
@@ -110,7 +114,11 @@ export class Encoder implements ifs.PacketStream {
                 if (wce) {
                     streams.push(wce[0]);
                     encoders.push(wce[1]);
-                    destructors.push(async () => wce[1].close());
+                    destructors.push(async () => {
+                        try {
+                            wce[1].close()
+                        } catch (ex) {}
+                    });
                     continue;
                 }
 

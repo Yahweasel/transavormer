@@ -91,7 +91,11 @@ export class Decoder implements ifs.FrameStream {
                 );
                 if (wcd) {
                     decoders.push(wcd);
-                    destructors.push(async () => wcd.close());
+                    destructors.push(async () => {
+                        try {
+                            wcd.close()
+                        } catch (ex) {}
+                    });
                     continue;
                 }
 
@@ -101,7 +105,11 @@ export class Decoder implements ifs.FrameStream {
                 );
                 if (wcd) {
                     decoders.push(wcd);
-                    destructors.push(async () => wcd.close());
+                    destructors.push(async () => {
+                        try {
+                            wcd.close()
+                        } catch (ex) {}
+                    });
                     continue;
                 }
 
@@ -336,6 +344,11 @@ export class Decoder implements ifs.FrameStream {
     streams: Promise<ifs.StreamParameters[]>;
 }
 
+const isFirefox =
+    (typeof navigator !== "undefined") &&
+    navigator.userAgent &&
+    (navigator.userAgent.indexOf("Firefox") >= 0);
+
 /**
  * @private
  * Try to get a VideoDecoder instance for this stream.
@@ -346,6 +359,19 @@ async function tryVideoDecoder(
     stream: LibAVT.CodecParameters, decodeQueue: ifs.StreamFrame[],
     decodeErr: (x: any) => void
 ) {
+    if (isFirefox) {
+        /*
+         * Firefox VideoDecoder bugs:
+         * (1) Decodes YUV data as RGB. This is just weird.
+         * (2) VideoFrames depend on the VideoDecoder itself not being closed.
+         *     If you attempt to read a VideoFrame from a closed decoder, it
+         *     crashes. This means we can't safely clean up our VideoDecoder
+         *     without tracing all VideoFrames it's responsible for. It's
+         *     unclear if it's even possible to do that.
+         */
+        return null;
+    }
+
     try {
         const config = await lawc.videoStreamToConfig(la, stream);
         const support = await VideoDecoder.isConfigSupported(
