@@ -222,6 +222,9 @@ export class Encoder implements ifs.PacketStream {
         }
         this.streams = Promise.all(streams);
 
+        let allHadPackets = false;
+        const hadPackets = streams.map(_ => false);
+
         // Create the stream
         this.stream = new ReadableStream({
             pull: async (controller) => {
@@ -233,10 +236,26 @@ export class Encoder implements ifs.PacketStream {
                     }
 
                     if (encodeQueue.length) {
+                        if (!allHadPackets) {
+                            /* The streams have only settled once every stream
+                             * has had packets, so we need to check. */
+                            for (const packet of encodeQueue) {
+                                let streamIndex = 0;
+                                if (typeof packet === "number")
+                                    streamIndex = await la.AVPacket_stream_index(packet);
+                                else
+                                    streamIndex = packet.stream_index!;
+                                hadPackets[streamIndex] = true;
+                            }
+                            allHadPackets = hadPackets.indexOf(false) < 0;
+                        }
+
                         controller.enqueue(
                             encodeQueue.splice(0, encodeQueue.length)
                         );
-                        break;
+
+                        if (allHadPackets)
+                            break;
                     }
 
                     if (frameEOF) {

@@ -34,6 +34,8 @@ console.log("Video codecs supported by WebCodecs:", videoCodecs);
 
 for (const video of videoCodecs) {
     for (const audio of audioCodecs) {
+        console.log(`${video}:${audio}`);
+
         let format = "matroska";
         switch (video.replace(/\..*/, "") + ":" + audio.replace(/\..*/, "")) {
             case "vp8:opus":
