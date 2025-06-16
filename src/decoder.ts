@@ -26,6 +26,11 @@ type Frame = LibAVT.Frame | wcp.VideoFrame | wcp.AudioData;
 type LibAVDecoder = [LibAVT.LibAV, [number, number, number, number]];
 type AnyDecoder = LibAVDecoder | wcp.VideoDecoder | wcp.AudioDecoder;
 
+export const isFirefox =
+    (typeof navigator !== "undefined") &&
+    navigator.userAgent &&
+    (navigator.userAgent.indexOf("Firefox") >= 0);
+
 /**
  * A multi-decoder, consisting of decoders for any number of streams.
  */
@@ -90,10 +95,27 @@ export class Decoder implements ifs.FrameStream {
                     la, streamIndex, stream, decodeQueue, setDecodeErr
                 );
                 if (wcd) {
+                    if (isFirefox) {
+                        /* Firefox has a bug that the decoder can only be safely
+                         * closed once all the frames have been closed. Thus, we
+                         * have to keep a reference count and make sure the
+                         * frames are closed before closing the decoder. */
+                        const wcdFix = <any> wcd;
+                        wcdFix.tavClose = wcdFix.close;
+                        wcdFix.tavCount = 0;
+                        wcdFix.tavTryClose = false;
+                        wcdFix.close = function() {
+                            if (this.tavCount <= 0)
+                                this.tavClose();
+                            else
+                                this.tavTryClose = true;
+                        };
+                    }
+
                     decoders.push(wcd);
                     destructors.push(async () => {
                         try {
-                            wcd.close()
+                            wcd.close();
                         } catch (ex) {}
                     });
                     continue;
@@ -107,7 +129,7 @@ export class Decoder implements ifs.FrameStream {
                     decoders.push(wcd);
                     destructors.push(async () => {
                         try {
-                            wcd.close()
+                            wcd.close();
                         } catch (ex) {}
                     });
                     continue;
@@ -344,11 +366,6 @@ export class Decoder implements ifs.FrameStream {
     streams: Promise<ifs.StreamParameters[]>;
 }
 
-const isFirefox =
-    (typeof navigator !== "undefined") &&
-    navigator.userAgent &&
-    (navigator.userAgent.indexOf("Firefox") >= 0);
-
 /**
  * @private
  * Try to get a VideoDecoder instance for this stream.
@@ -359,19 +376,6 @@ async function tryVideoDecoder(
     stream: LibAVT.CodecParameters, decodeQueue: ifs.StreamFrame[],
     decodeErr: (x: any) => void
 ) {
-    if (isFirefox) {
-        /*
-         * Firefox VideoDecoder bugs:
-         * (1) Decodes YUV data as RGB. This is just weird.
-         * (2) VideoFrames depend on the VideoDecoder itself not being closed.
-         *     If you attempt to read a VideoFrame from a closed decoder, it
-         *     crashes. This means we can't safely clean up our VideoDecoder
-         *     without tracing all VideoFrames it's responsible for. It's
-         *     unclear if it's even possible to do that.
-         */
-        return null;
-    }
-
     try {
         const config = await lawc.videoStreamToConfig(la, stream);
         const support = await VideoDecoder.isConfigSupported(
@@ -380,10 +384,31 @@ async function tryVideoDecoder(
         if (!support.supported)
             return null;
         const dec = new VideoDecoder({
-            output: x => decodeQueue.push({
-                streamIndex: streamIndex,
-                frame: <wcp.VideoFrame> <any> x
-            }),
+            output: frame => {
+                if (isFirefox) {
+                    // See the other "isFirefox" above to explain this.
+                    const frameFix = <any> frame;
+                    const decFix = <any> dec;
+                    decFix.tavCount++;
+                    frameFix.tavClose = frameFix.close;
+                    frameFix.tavDecoder = dec;
+                    frameFix.close = function() {
+                        this.tavClose();
+                        decFix.tavCount--;
+                        if (decFix.tavTryClose && decFix.tavCount <= 0) {
+                            try {
+                                decFix.close();
+                            } catch (ex) {}
+                            decFix.tavTryClose = false;
+                        }
+                    };
+                }
+
+                decodeQueue.push({
+                    streamIndex: streamIndex,
+                    frame: <wcp.VideoFrame> <any> frame
+                });
+            },
             error: x => decodeErr(x)
         });
         dec.configure(<VideoDecoderConfig> <any> config);

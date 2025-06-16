@@ -19,6 +19,7 @@ import * as lawc from "libavjs-webcodecs-bridge";
 import type * as wcp from "libavjs-webcodecs-polyfill";
 
 import * as ifs from "./interfaces";
+import * as decoder from "./decoder";
 
 declare let AudioEncoder: typeof wcp.AudioEncoder;
 
@@ -350,6 +351,29 @@ export class Encoder implements ifs.PacketStream {
                             const wce = <wcp.VideoEncoder | wcp.AudioEncoder> enc;
                             await webcodecsifyFrames(la, frames);
                             for (const frame of <any[]> frames) {
+                                if (decoder.isFirefox && frame.tavDecoder) {
+                                    /* See the isFirefox comments in decoder to
+                                     * explain this. */
+                                    const wceFix = <any> wce;
+                                    if (!wceFix.tavClose) {
+                                        const dec = frame.tavDecoder;
+                                        dec.tavCount++;
+                                        wceFix.tavClose = wceFix.close;
+                                        wceFix.close = function() {
+                                            try {
+                                                this.tavClose();
+                                            } catch (ex) {}
+                                            dec.tavCount--;
+                                            if (dec.tavTryClose && dec.tavCount <= 0) {
+                                                try {
+                                                    dec.close();
+                                                } catch (ex) {}
+                                                dec.tavTryClose = false;
+                                            }
+                                        };
+                                    }
+                                }
+
                                 wce.encode(frame);
                                 frame.close();
                                 while (wce.encodeQueueSize > 3)
