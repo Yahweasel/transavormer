@@ -1,6 +1,6 @@
 {
   "name": "transavormer",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Transform (transcode, transmux, etc) audio/video formats using libav.js and WebCodecs",
   "main": "src/main.js",
   "types": "src/main.ts",
