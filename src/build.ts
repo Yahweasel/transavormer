@@ -93,6 +93,43 @@ export function build(libav: LibAVT.LibAV, init: any): Promise<any> {
     throw new Error(`Unrecognized initializer type ${(<any> init).type}`);
 }
 
+/**
+ * Returns the basic data type for this initialier or stream.
+ */
+function transformType(init: any): "file" | "packet" | "frame" | "unknown" {
+    if (init.streamType === "file" || init.streamType === "packet") {
+        return init.streamType;
+    } else if (
+        init.streamType === "frame" ||
+        init.streamType === "libav-frame" ||
+        init.streamType === "webcodecs-frame"
+    ) {
+        return "frame";
+    }
+
+    switch (init.type) {
+        case "demuxer":
+        case "packet-selector":
+        case "encoder":
+        case "packet-stream":
+            return "packet";
+
+        case "decoder":
+        case "frame-selector":
+        case "frame-normalizer":
+        case "play-normalizer":
+        case "la-filter":
+        case "frame-stream":
+        case "mono-frame-stream":
+            return "frame";
+
+        case "muxer":
+            return "file";
+    }
+
+    return "unknown";
+}
+
 function buildDemuxer(
     libav: LibAVT.LibAV, init: any, ptr: boolean
 ): Promise<ifs.PacketStream> {
@@ -249,16 +286,15 @@ function buildFrameStream(
     )
         return Promise.resolve(init);
 
-    if (init.type === "la-filter") {
-        return buildLAFilter(libav, init, ptr || !!init.ptr);
-    } else if (init.type === "frame-normalizer") {
-        return buildNormalizer(libav, init, ptr || !!init.ptr);
-    } else if (init.type === "frame-stream") {
-        return <any> buildUserFrameStream(libav, init);
-    } else if (init.type === "mono-frame-stream") {
-        return <any> buildUserMonoFrameStream(libav, init);
-    } else {
+    const type = transformType(init);
+    if (type === "packet" || type == "file" || init.type === "decoder") {
         return buildDecoder(libav, init, ptr || !!init.ptr);
+    } else if (init.type === "frame-normalizer") {
+        return buildNormalizer(libav, init, ptr || !init.ptr);
+    } else if (init.type === "la-filter") {
+        return buildLAFilter(libav, init, ptr || !init.ptr);
+    } else {
+        return <any> build(libav, init);
     }
 }
 
@@ -301,14 +337,13 @@ function buildPacketStream(
     if (init.streamType === "packet")
         return Promise.resolve(init);
 
-    if (init.type === "filter" ||
-        init.type === "frame-normalizer" ||
-        init.type === "encoder") {
-        return buildEncoder(libav, init, ptr || !!init.ptr);
-    } else if (init.type === "packet-stream") {
-        return <any> buildUserPacketStream(init);
+    const type = transformType(init);
+    if (type === "file" || init.type === "demuxer") {
+        return buildDemuxer(libav, init, ptr || !init.ptr);
+    } else if (type === "frame" || init.type === "encoder") {
+        return buildEncoder(libav, init, ptr || !init.ptr);
     } else {
-        return buildDemuxer(libav, init, ptr || !!init.ptr);
+        return build(libav, init);
     }
 }
 
