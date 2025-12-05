@@ -127,7 +127,14 @@ function transformType(init: any): "file" | "packet" | "frame" | "unknown" {
             return "file";
     }
 
-    return "unknown";
+    if (
+        init.read /* file wrapper */ ||
+        init.getReader /* ReadableStream */ ||
+        (init.arrayBuffer && init.slice) /* Blob/File */
+    ) {
+        return "file";
+    } else
+        return "unknown";
 }
 
 function buildDemuxer(
